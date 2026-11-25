@@ -8,7 +8,7 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 - **Current milestone:** Milestone 8 — refined 3D vessel surfaces, embryo envelope and Optuna-tuned rendering
 - **Application:** React + TypeScript + Vite + Three.js
 - **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, classical and human portal pathways, six hepatic-outflow layers, paired umbilical-vein pathways, eight cardinal layers, subcardinal plexus and an explicit two-model IVC / azygos interpretation selector
-- **Verification:** Milestone 8 geometry optimisation, TypeScript validation, graph audit and Vite production build are being run in GitHub Actions; pixel-level browser review pending
+- **Verification:** Optuna TPE completed 80 trials over 86 centre-lines; TypeScript validation, graph validation and Vite production build passed in GitHub Actions; pixel-level browser review pending
 - **Scientific profiles:** classical 2008 synthesis and human 2017 reconstruction, supplemented by 2024 CS15 venous-route morphology
 
 ## Run locally

@@ -35,8 +35,8 @@ interface SceneApi {
 
 function tube(points: THREE.Vector3[], radius: number, color: string) {
   const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
-  const tubularSegments = Math.max(56, Math.min(160, Math.ceil(curve.getLength() * 30)));
-  const geometry = new THREE.TubeGeometry(curve, tubularSegments, radius, 24, false);
+  const tubularSegments = Math.max(VESSEL_RENDER_CONFIG.minTubularSegments, Math.min(160, Math.ceil(curve.getLength() * VESSEL_RENDER_CONFIG.samplesPerUnit)));
+  const geometry = new THREE.TubeGeometry(curve, tubularSegments, radius, VESSEL_RENDER_CONFIG.radialSegments, false);
   const material = new THREE.MeshPhysicalMaterial({
     color,
     roughness: 0.46,
@@ -276,6 +276,28 @@ function makeVesselMesh(
       indices.push(a, b, d, b, c, d);
     }
   }
+
+  // Rounded end caps close open tube ends and soften connected graph junctions.
+  const addCap = (center: THREE.Vector3) => {
+    const cap = new THREE.SphereGeometry(radius * VESSEL_RENDER_CONFIG.endpointRadiusScale, radialSegments, 16);
+    cap.translate(center.x, center.y, center.z);
+    const capPositions = cap.attributes.position as THREE.BufferAttribute;
+    const capNormals = cap.attributes.normal as THREE.BufferAttribute;
+    const capUvs = cap.attributes.uv as THREE.BufferAttribute;
+    const offset = positions.length / 3;
+    for (let i = 0; i < capPositions.count; i += 1) {
+      positions.push(capPositions.getX(i), capPositions.getY(i), capPositions.getZ(i));
+      normals.push(capNormals.getX(i), capNormals.getY(i), capNormals.getZ(i));
+      uvs.push(capUvs.getX(i), capUvs.getY(i));
+    }
+    const capIndices = cap.index?.array;
+    if (capIndices) {
+      for (let i = 0; i < capIndices.length; i += 1) indices.push(capIndices[i] + offset);
+    }
+    cap.dispose();
+  };
+  addCap(curve.getPointAt(0));
+  addCap(curve.getPointAt(1));
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));

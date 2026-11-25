@@ -18,4 +18,4 @@ Replace the blockout-like vessel appearance with smoother, more legible teaching
 - Aesthetic smoothing must not be used to merge the classical and human reconstruction models or infer missing CS18–CS23 anatomy.
 
 ## Verification
-GitHub Actions runs the deterministic-seed 80-trial Optuna study and stores the geometry optimisation JSON as a workflow artifact, then runs TypeScript validation, the graph validator and the Vite production build. Browser pixel inspection is separate and is not claimed by the automated build.
+Optuna TPE completed 80 deterministic-seed trials over 86 authored centre-lines. Best settings: centripetal interpolation, 20 samples per unit, 32 radial segments and 16 subdivisions per control-point interval for the objective evaluation. The selected settings are applied in the renderer; anatomical control points are unchanged. GitHub Actions TypeScript validation, graph validation and Vite production build passed. Browser pixel inspection is separate and is not claimed by the automated build.

@@ -1,9 +1,9 @@
 export const VESSEL_RENDER_CONFIG = {
   curveType: 'centripetal' as const,
-  samplesPerUnit: 32,
+  samplesPerUnit: 20,
   minTubularSegments: 48,
   maxTubularSegments: 192,
-  radialSegments: 24,
+  radialSegments: 32,
   endpointRadiusScale: 0.965,
   midRadiusBoost: 0.02,
   roughness: 0.3,
