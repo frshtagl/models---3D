@@ -16,6 +16,7 @@ export interface AnatomicalStructure {
 }
 
 export const ANATOMICAL_STRUCTURES: AnatomicalStructure[] = [
+  { id: 'embryo-envelope', name: 'Embryo body envelope', shortName: 'Embryo envelope', category: 'context', description: 'A low-opacity C-shaped embryonic body silhouette used to orient the venous systems in three dimensions. It is a teaching envelope, not a specimen-accurate surface reconstruction.', status: 'Embryonic body context', color: '#b58d85' },
   { id: 'liver', name: 'Hepatic primordium', shortName: 'Liver primordium', category: 'organ', description: 'A schematic early hepatic mass used to orient developing hepatic vascular pathways. It is not a mature liver model.', status: 'Reference anatomy', color: '#c98a58' },
   { id: 'duodenum', name: 'Duodenum', shortName: 'Duodenum', category: 'organ', description: 'A curved gut landmark. Its dorsal and ventral surfaces are essential for understanding the depth of retroduodenal and ventral intervitelline connections.', status: 'Reference anatomy', color: '#e5b77f' },
   { id: 'foregut', name: 'Foregut reference', shortName: 'Foregut', category: 'organ', description: 'A simplified foregut segment that provides orientation for the hepatic diverticulum and duodenal region.', status: 'Context structure', color: '#c78f78' },

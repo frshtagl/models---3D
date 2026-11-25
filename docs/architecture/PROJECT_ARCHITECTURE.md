@@ -1,6 +1,6 @@
 # Interactive Embryonic Venous Development Laboratory — Architecture
 
-**Status:** Original Milestone 0 architecture proposal; the React / TypeScript / Vite / Three.js browser workstation is now implemented through Milestone 7  
+**Status:** Original Milestone 0 architecture proposal; the React / TypeScript / Vite / Three.js browser workstation is now implemented through Milestone 8  
 **Repository:** frshtagl/models---3D  
 **Initial module:** Vitelline veins  
 **Future modules:** Umbilical veins, cardinal veins

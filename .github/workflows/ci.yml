@@ -20,6 +20,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Optuna geometry optimiser
+        run: python -m pip install --disable-pip-version-check 'optuna>=4,<5'
+
+      - name: Optimise vessel rendering from authored centre-lines
+        run: python scripts/optimize_vessel_geometry.py --trials 80 --output artifacts/geometry-optimization.json
+
+      - name: Upload Optuna geometry report
+        uses: actions/upload-artifact@v4
+        with:
+          name: vessel-geometry-optimization
+          path: artifacts/geometry-optimization.json
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

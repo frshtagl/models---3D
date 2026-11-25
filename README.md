@@ -5,10 +5,10 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 ## Current status
 
 - **Development branch:** feature/vitelline-veins-3d
-- **Current milestone:** Milestone 7 — paired umbilical veins and cardinal venous foundations
+- **Current milestone:** Milestone 8 — refined 3D vessel surfaces, embryo envelope and Optuna-tuned rendering
 - **Application:** React + TypeScript + Vite + Three.js
 - **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, classical and human portal pathways, six hepatic-outflow layers, paired umbilical-vein pathways, eight cardinal layers, subcardinal plexus and an explicit two-model IVC / azygos interpretation selector
-- **Verification:** Milestone 7 TypeScript validation, 77-node graph audit, 22-step teaching-reference audit and Vite production build passed in GitHub Actions; browser visual review pending
+- **Verification:** Milestone 8 geometry optimisation, TypeScript validation, graph audit and Vite production build are being run in GitHub Actions; pixel-level browser review pending
 - **Scientific profiles:** classical 2008 synthesis and human 2017 reconstruction, supplemented by 2024 CS15 venous-route morphology
 
 ## Run locally
@@ -95,6 +95,8 @@ They must not be blended into one invented developmental sequence. Each profile 
 26. [Umbilical and cardinal vein anatomy](docs/anatomy/vitelline-veins/UMBILICAL_AND_CARDINAL_VEINS.md)
 27. [Cardinal vascular graph architecture](docs/architecture/CARDINAL_VASCULAR_GRAPH.md)
 28. [Milestone 7 report](docs/milestones/MILESTONE_7_REPORT.md)
+29. [Milestone 8 geometry refinement report](docs/milestones/MILESTONE_8_REPORT.md)
+30. [Optuna vessel geometry optimiser](scripts/optimize_vessel_geometry.py)
 29. [Umbilical and cardinal browser teaching guide](docs/teaching/UMBILICAL_CARDINAL_BROWSER_TEACHING_GUIDE.md)
 
 ## Planned development
@@ -107,7 +109,8 @@ They must not be blended into one invented developmental sequence. Each profile 
 - Milestone 5: portal trunk, portal sinus, first-order portal branches and browser teaching walkthrough — implemented; portal-path / attachment audit and GitHub Actions typecheck / production build passed; browser visual review pending.
 - Milestone 6: classical hepatic efferent route, human venous duct, classical ductus venosus, terminal hepatic veins and flow arrows — implemented; TypeScript, source-graph / teaching-step validation and production build passed; browser visual review pending.
 - Milestone 7: paired umbilical veins, early cardinal drainage, subcardinal plexus, iliac confluence and alternative IVC / azygos interpretations — implemented; TypeScript, graph / teaching-step validation and production build passed; browser visual review pending.
-- Milestone 8: extend the timeline through CS18–CS23 and build the complete source-specific IVC, renal collar and azygos reconstructions.
+- Milestone 8: refined vessel surfaces, anatomical envelope, improved venous pole and reduced visual clutter — implemented; Optuna and production verification in progress.
+- Milestone 9: extend the timeline through CS18–CS23 and build the complete source-specific IVC, renal collar and azygos reconstructions.
 - Milestone 9: learning, exploration and assessment tools.
 - Milestone 10: scientific review, browser inspection, verification and release.
 

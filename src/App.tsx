@@ -181,7 +181,7 @@ export default function App() {
           <span>LOCAL INTERACTIVE MODULE</span>
           <button className="topbar-action" onClick={toggleTeachingGuide}>{teachingOpen ? 'Hide teaching guide' : 'Teaching guide'}</button>
           <button className="topbar-action" onClick={toggleFullscreen}>{isFullscreen ? 'Exit full screen' : 'Full screen'}</button>
-          <span className="version-chip">v0.7 · UMBILICAL + CARDINAL</span>
+          <span className="version-chip">v0.8 · REFINED VESSEL GEOMETRY</span>
         </div>
       </header>
 
@@ -543,7 +543,7 @@ export default function App() {
               <ul className="network-issues">{networkIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
             )}
             <div className="scope-progress"><span /></div>
-            <div className="scope-foot"><span>Milestone 7 · umbilical + cardinal</span><strong>IMPLEMENTED</strong></div>
+            <div className="scope-foot"><span>Milestone 8 · vessel geometry refinement</span><strong>IMPLEMENTED</strong></div>
           </section>
         </aside>
       </main>
@@ -551,7 +551,7 @@ export default function App() {
       <footer className="app-footer">
         <span>EMBRYOLAB <b>·</b> EMBRYONIC VENOUS DEVELOPMENT</span>
         <span>Human development · Evidence-aware · Procedural reference geometry</span>
-        <span>Development build 0.7.0</span>
+        <span>Development build 0.8.0</span>
       </footer>
     </div>
   );
