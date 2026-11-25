@@ -1,6 +1,6 @@
 # Milestone 3 — Hepatic Sinusoidal Plexus and Intrahepatic Venous Pathways
 
-**Status:** Source implementation committed; graph topology validation passed; CI build verification pending  
+**Status:** Source implementation committed; graph topology validation passed; GitHub Actions TypeScript and production build passed; browser review pending  
 **Date:** 25 November 2026  
 **Branch:** feature/vitelline-veins-3d
 
@@ -63,6 +63,19 @@ The states are teaching-stage bins, not exact day-by-day onset claims. Carnegie 
 - Stage and profile changes update visibility, opacity and schematic caliber.
 - The sinusoidal mesh is generated from editable source paths; Three.js meshes are render products only.
 - The scene legend distinguishes vitelline conduits, sinusoids, afferent channels and efferent / drainage channels.
+
+## 6. Verification results
+
+GitHub Actions run: https://github.com/frshtagl/models---3D/actions/runs/45659335054
+
+| Verification | Result |
+|---|---|
+| TypeScript validation (npm run typecheck) | Passed |
+| Production build (npm run build) | Passed |
+| Hepatic graph topology checks | Passed — 23 nodes, 33 paths, connected 20-path plexus |
+| Vitelline graph checks | Passed in the source-data validation |
+| Browser visual / interaction review | Pending |
+| Specialist embryology review | Pending |
 
 ## 6. Graph validation
 

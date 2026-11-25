@@ -8,6 +8,7 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 - **Current milestone:** Milestone 3 — hepatic sinusoidal plexus and intrahepatic venous pathways
 - **Application:** React + TypeScript + Vite + Three.js
 - **Anatomy status:** paired vitelline channels plus a profile-aware hepatic sinusoidal network and selected afferent / efferent pathways
+- **Verification:** graph checks passed; GitHub Actions TypeScript validation and production build passed; browser visual review pending
 - **Scientific profiles:** stage-aware classical 2008 synthesis and human 2017 reconstruction profiles
 
 ## Run locally
@@ -72,8 +73,8 @@ They must not be blended into one invented developmental sequence. Each profile 
 
 - Milestone 0: scientific specification, fate map, source register, coordinate contract and architecture.
 - Milestone 1: browser application shell and navigatable 3D anatomical blockout.
-- Milestone 2: paired vitelline veins and yolk-sac drainage — implemented; TypeScript / CI / browser verification remains tracked in its report.
-- Milestone 3: hepatic sinusoidal plexus and intrahepatic venous pathways — implemented; CI / browser verification pending.
+- Milestone 2: paired vitelline veins and yolk-sac drainage — implemented; the current branch CI build also compiles this milestone.
+- Milestone 3: hepatic sinusoidal plexus and intrahepatic venous pathways — implemented; TypeScript and production build passed; browser visual review pending.
 - Milestone 4: model-specific intervitelline anastomoses.
 - Milestone 5: regression, portal vein and lineage tracing.
 - Milestone 6: hepatic outflow and context-only fetal circulation.
