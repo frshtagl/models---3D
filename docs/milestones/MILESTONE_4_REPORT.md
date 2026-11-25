@@ -1,6 +1,6 @@
 # Milestone 4 — Intervitelline Anastomoses
 
-**Status:** Source implementation committed; topology and CI verification pending  
+**Status:** Source implementation committed; attachment audit passed; GitHub Actions TypeScript validation and production build passed; browser visual review pending  
 **Date:** 25 November 2026  
 **Branch:** feature/vitelline-veins-3d
 
@@ -99,7 +99,16 @@ validateIntervitellineNetwork() checks:
 - the human dorsal connection is caudal to the dorsal pancreatic bud;
 - the human transient ventral connection is caudal to the dorsal connection.
 
-These checks validate source topology and coordinate rules. They do not replace browser visual review or specialist embryology review.
+These checks validate source topology and coordinate rules. An independent attachment audit at commit b6715cf1dd68638d9b5150fe85e904320f0d024f confirmed 20 vitelline nodes, 8 parent vessel segments, 6 anastomosis paths, 44 centre-line points, and no missing endpoint or parent-centreline attachment.
+
+GitHub Actions: https://github.com/frshtagl/models---3D/actions/runs/45663666974
+
+- TypeScript validation: passed.
+- Production build: passed.
+- Browser visual review: pending.
+- Specialist embryology review: pending.
+
+These checks do not replace browser visual review or specialist embryology review.
 
 ## 9. Scientific and geometric limitations
 
