@@ -12,6 +12,8 @@ import {
   DEFAULT_VISIBILITY
 } from './data/structures';
 import type { StructureVisibility } from './data/structures';
+import { VITELLINE_NODES, VITELLINE_SEGMENTS, VITELLINE_NETWORK_ISSUES, getVesselPresentation } from './data/vitellineNetwork';
+import type { VitellineStageId } from './data/vitellineNetwork';
 
 const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
   { id: 'anterior', label: 'Anterior' },
@@ -27,11 +29,15 @@ export default function App() {
   const [profile, setProfile] = useState<EvidenceProfile>('human-2017');
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('oblique');
   const [visibleLayers, setVisibleLayers] = useState<StructureVisibility>(() => ({ ...DEFAULT_VISIBILITY }));
-  const [selectedStructure, setSelectedStructure] = useState<string | null>('liver');
+  const [selectedStructure, setSelectedStructure] = useState<string | null>('vitelline-right-extrahepatic');
   const [playing, setPlaying] = useState(false);
 
   const stage = DEVELOPMENT_STAGES[stageIndex];
   const selected = ANATOMICAL_STRUCTURES.find((item) => item.id === selectedStructure);
+  const selectedVessel = VITELLINE_SEGMENTS.find((item) => item.id === selectedStructure);
+  const selectedVesselPresentation = selectedVessel
+    ? getVesselPresentation(selectedVessel, profile, stage.id as VitellineStageId)
+    : null;
 
   useEffect(() => {
     if (!playing) return;
@@ -71,7 +77,7 @@ export default function App() {
         <div className="topbar-right">
           <span className="status-dot" />
           <span>LOCAL INTERACTIVE MODULE</span>
-          <span className="version-chip">v0.1 · BLOCKOUT</span>
+          <span className="version-chip">v0.2 · PAIRED VITELLINE VEINS</span>
         </div>
       </header>
 
@@ -97,7 +103,7 @@ export default function App() {
             <p className="profile-description">{PROFILE_DESCRIPTIONS[profile]}</p>
             <div className="profile-note">
               <span className="note-icon">i</span>
-              Profile selection is a scientific data scaffold in this milestone. Detailed vessel graphs are added in later milestones.
+              Changing this profile changes the reported remodeling sequence. The two vessel interpretations are kept separate and are never blended.
             </div>
           </section>
 
@@ -143,8 +149,8 @@ export default function App() {
         <section className="viewer-column">
           <div className="viewer-toolbar">
             <div>
-              <div className="eyebrow">3D ANATOMICAL BLOCKOUT</div>
-              <h1>Hepatic region <span>/ {stage.label}</span></h1>
+              <div className="eyebrow">INTERACTIVE VITELLINE VENOUS NETWORK</div>
+              <h1>Paired vitelline veins <span>/ {stage.label}</span></h1>
             </div>
             <div className="camera-toolbar">
               {CAMERA_PRESETS.map((preset) => (
@@ -163,6 +169,7 @@ export default function App() {
           <div className="viewport-wrap">
             <EmbryoScene
               stage={stage}
+              profile={profile}
               visibleLayers={visibleLayers}
               selectedStructure={selectedStructure}
               cameraPreset={cameraPreset}
@@ -180,9 +187,9 @@ export default function App() {
               </div>
             </div>
             <div className="viewport-legend">
-              <span><i className="legend-dot liver-dot" /> Hepatic region</span>
+              <span><i className="legend-dot right-vein-dot" /> Right vitelline</span>
+              <span><i className="legend-dot left-vein-dot" /> Left vitelline</span>
               <span><i className="legend-dot gut-dot" /> Gut reference</span>
-              <span><i className="legend-dot venous-dot" /> Venous pole</span>
             </div>
             <div className="scene-instruction">DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM <span>·</span> RIGHT-DRAG TO PAN</div>
             <div className="schematic-stamp">SCHEMATIC · NOT TO SCALE</div>
@@ -258,6 +265,13 @@ export default function App() {
                 <div className="inspector-title">{selected.name}</div>
                 <span className="category-tag">{selected.category}</span>
                 <p>{selected.description}</p>
+                {selectedVessel && selectedVesselPresentation && (
+                  <div className="vessel-state-card">
+                    <div className="section-label">DEVELOPMENTAL STATE</div>
+                    <strong>{selectedVesselPresentation.statusLabel}</strong>
+                    <small>{selectedVessel.side} side · {selectedVessel.region.replace('-', ' ')}</small>
+                  </div>
+                )}
                 <div className="inspector-meta">
                   <span>Stage context</span>
                   <strong>{stage.label}</strong>
@@ -269,11 +283,17 @@ export default function App() {
           </section>
 
           <section className="inspector-card milestone-card">
-            <div className="section-label">MILESTONE 1 SCOPE</div>
-            <div className="scope-status"><span className="status-dot" /> Reference anatomy blockout</div>
-            <p>Vessel paths are intentionally not shown yet. First we verify the gut, hepatic region, venous pole and orientation in 3D.</p>
+            <div className="section-label">NETWORK VALIDATION</div>
+            <div className="scope-status">
+              <span className={VITELLINE_NETWORK_ISSUES.length === 0 ? 'status-dot' : 'status-dot warning-dot'} />
+              {VITELLINE_NETWORK_ISSUES.length === 0 ? 'Graph structure checks passed' : VITELLINE_NETWORK_ISSUES.length + ' graph issues found'}
+            </div>
+            <p>{VITELLINE_SEGMENTS.length} independently selectable segments · {VITELLINE_NODES.length} named connection nodes. No intervitelline anastomoses are included yet.</p>
+            {VITELLINE_NETWORK_ISSUES.length > 0 && (
+              <ul className="network-issues">{VITELLINE_NETWORK_ISSUES.map((issue) => <li key={issue}>{issue}</li>)}</ul>
+            )}
             <div className="scope-progress"><span /></div>
-            <div className="scope-foot"><span>3D foundation</span><strong>IN PROGRESS</strong></div>
+            <div className="scope-foot"><span>Milestone 2 · paired channels</span><strong>IMPLEMENTED</strong></div>
           </section>
         </aside>
       </main>
@@ -281,7 +301,7 @@ export default function App() {
       <footer className="app-footer">
         <span>EMBRYOLAB <b>·</b> VITELLINE VEIN MODULE</span>
         <span>Human development · Evidence-aware · Procedural reference geometry</span>
-        <span>Development build 0.1.0</span>
+        <span>Development build 0.2.0</span>
       </footer>
     </div>
   );

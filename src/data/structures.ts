@@ -2,7 +2,7 @@ export interface AnatomicalStructure {
   id: string;
   name: string;
   shortName: string;
-  category: 'organ' | 'landmark' | 'context';
+  category: 'organ' | 'landmark' | 'context' | 'vessel';
   description: string;
   status: string;
   color: string;
@@ -15,6 +15,14 @@ export const ANATOMICAL_STRUCTURES: AnatomicalStructure[] = [
   { id: 'yolk-sac', name: 'Yolk sac / umbilical vesicle', shortName: 'Yolk sac', category: 'context', description: 'The vitelline veins drain the yolk sac. This context structure is schematic and does not depict the full extraembryonic circulation.', status: 'Context structure', color: '#d6a94f' },
   { id: 'sinus-venosus', name: 'Sinus venosus / venous pole', shortName: 'Sinus venosus', category: 'landmark', description: 'The venous pole is the cranial destination for early paired venous inflows. This landmark is shown without modeling the full heart.', status: 'Landmark', color: '#6c9acb' },
   { id: 'transverse-septum', name: 'Transverse septum region', shortName: 'Transverse septum', category: 'landmark', description: 'A positional reference for the hepatic primordium. The rendered sheet is a simplified spatial guide, not a histological reconstruction.', status: 'Landmark', color: '#7c9b8b' },
+  { id: 'vitelline-right-yolk-sac-root', name: 'Right vitelline vein — yolk-sac root', shortName: 'Right yolk-sac root', category: 'vessel', description: 'The right vitelline channel begins in the yolk-sac venous drainage and joins the extrahepatic right-sided trunk. Its centerline is schematic.', status: 'Vitelline vessel · right', color: '#53b7d8' },
+  { id: 'vitelline-right-extrahepatic', name: 'Right vitelline vein — extrahepatic trunk', shortName: 'Right extrahepatic trunk', category: 'vessel', description: 'The right extrahepatic vitelline trunk is kept lateral to the gut reference. No intervitelline anastomosis is included in this milestone.', status: 'Vitelline vessel · right', color: '#53b7d8' },
+  { id: 'vitelline-right-intrahepatic', name: 'Right vitelline vein — intrahepatic conduit', shortName: 'Right intrahepatic conduit', category: 'vessel', description: 'A schematic right intrahepatic vitelline conduit. The 2017 human reconstruction describes a wider right-sided conduit that persists longer.', status: 'Vitelline vessel · right', color: '#53b7d8' },
+  { id: 'vitelline-right-hepatocardiac', name: 'Right vitelline vein — hepatocardiac channel', shortName: 'Right hepatocardiac channel', category: 'vessel', description: 'The right hepatocardiac channel carries right hepatic venous outflow toward the venous pole and becomes the dominant right-sided channel.', status: 'Vitelline vessel · right', color: '#53b7d8' },
+  { id: 'vitelline-left-yolk-sac-root', name: 'Left vitelline vein — yolk-sac root', shortName: 'Left yolk-sac root', category: 'vessel', description: 'The left vitelline channel begins in the yolk-sac venous drainage and joins the extrahepatic left-sided trunk. Its centerline is schematic.', status: 'Vitelline vessel · left', color: '#a58de4' },
+  { id: 'vitelline-left-extrahepatic', name: 'Left vitelline vein — extrahepatic trunk', shortName: 'Left extrahepatic trunk', category: 'vessel', description: 'The left extrahepatic vitelline trunk is kept lateral to the gut reference and distinct from later portal anastomoses.', status: 'Vitelline vessel · left', color: '#a58de4' },
+  { id: 'vitelline-left-intrahepatic', name: 'Left vitelline vein — intrahepatic conduit', shortName: 'Left intrahepatic conduit', category: 'vessel', description: 'The left intrahepatic vitelline conduit is initially paired with the right. In the 2017 reconstruction it fragments and is no longer a large distinct conduit by early CS14; this does not mean all left intrahepatic vascular channels disappear.', status: 'Vitelline vessel · left', color: '#a58de4' },
+  { id: 'vitelline-left-hepatocardiac', name: 'Left vitelline vein — hepatocardiac channel', shortName: 'Left hepatocardiac channel', category: 'vessel', description: 'The left hepatocardiac channel becomes incorporated into the sinus venosus wall and regresses as a distinct channel. This is not the same as disappearance of the entire left vitelline vein.', status: 'Vitelline vessel · left', color: '#a58de4' },
   { id: 'orientation-axes', name: 'Anatomical orientation axes', shortName: 'Orientation axes', category: 'landmark', description: 'Coordinate convention: +X embryonic right, +Y cranial, +Z dorsal. The anterior view is from the ventral side.', status: 'Navigation aid', color: '#9aa9bc' }
 ];
 

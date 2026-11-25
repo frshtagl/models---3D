@@ -5,9 +5,9 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 ## Current status
 
 - **Development branch:** feature/vitelline-veins-3d
-- **Current milestone:** Milestone 1 — interactive 3D foundation
+- **Current milestone:** Milestone 2 — paired vitelline veins and yolk-sac drainage
 - **Application:** React + TypeScript + Vite + Three.js
-- **Anatomy status:** reference-organ blockout only; detailed vitelline vessels are not implemented yet
+- **Anatomy status:** paired vitelline channels implemented as schematic, independently selectable vessel segments
 - **Scientific profiles:** classical 2008 synthesis and human 2017 reconstruction are selectable scaffolds
 
 ## Run locally
@@ -33,7 +33,10 @@ Production verification:
 - Play the stage sequence.
 - Select structures from the scene or anatomy layer list.
 - Toggle layer visibility or isolate the selected structure.
-- Switch the scientific evidence profile.
+- Switch the scientific evidence profile; the profile changes left-sided remodeling states without blending the two published models.
+- Inspect eight vitelline-vein segments connected through ten named graph nodes.
+- Follow the paired yolk-sac roots, extrahepatic trunks, intrahepatic conduits and hepatocardiac channels.
+- Inspect the stage-dependent right-sided dominance and the profile-specific left-sided remodeling.
 
 The present geometry is a schematic orientation blockout, not a measured embryo reconstruction. Stage-dependent organ scaling is illustrative and is not intended to represent exact growth measurements.
 
@@ -56,6 +59,8 @@ They must not be blended into one invented developmental sequence. Each profile 
 7. [Project architecture](docs/architecture/PROJECT_ARCHITECTURE.md)
 8. [Milestone 0 report](docs/milestones/MILESTONE_0_REPORT.md)
 9. [Milestone 1 report](docs/milestones/MILESTONE_1_REPORT.md)
+10. [Milestone 2 report](docs/milestones/MILESTONE_2_REPORT.md)
+11. [Vessel graph schema](docs/architecture/VESSEL_GRAPH_SCHEMA.md)
 
 ## Planned development
 

@@ -177,3 +177,11 @@ button:disabled { cursor: not-allowed; opacity: 0.38; }
   .timeline-actions { gap: 4px; }
   .timeline-actions .subtle-button, .play-button { padding: 6px 7px; font-size: 8px; }
 }
+
+.right-vein-dot { background: #53b7d8; box-shadow: 0 0 8px rgba(83,183,216,.55); }
+.left-vein-dot { background: #a58de4; box-shadow: 0 0 8px rgba(165,141,228,.45); }
+.vessel-state-card { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; padding: 10px; border: 1px solid rgba(113,183,223,.2); border-radius: 7px; background: rgba(80,145,183,.08); }
+.vessel-state-card strong { color: #cce8f7; font-size: 10px; font-weight: 650; }
+.vessel-state-card small { color: #86a7be; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.warning-dot { background: #e5a65b !important; box-shadow: 0 0 9px rgba(229,166,91,.4) !important; }
+.network-issues { margin: 8px 0 0; padding-left: 15px; color: #e3b16f; font-size: 9px; line-height: 1.5; }

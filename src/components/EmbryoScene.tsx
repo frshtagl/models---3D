@@ -3,11 +3,15 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { DevelopmentStage } from '../data/stages';
 import type { StructureVisibility } from '../data/structures';
+import type { EvidenceProfile } from '../data/stages';
+import { VITELLINE_SEGMENTS, getVesselPresentation } from '../data/vitellineNetwork';
+import type { Point3, VitellineStageId } from '../data/vitellineNetwork';
 
 export type CameraPreset = 'anterior' | 'posterior' | 'right' | 'left' | 'superior' | 'inferior' | 'oblique' | 'reset';
 
 interface Props {
   stage: DevelopmentStage;
+  profile: EvidenceProfile;
   visibleLayers: StructureVisibility;
   selectedStructure: string | null;
   cameraPreset: CameraPreset;
@@ -56,7 +60,13 @@ function makeLiver() {
   });
   geometry.translate(0, 0, -0.35);
   const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
-    color: '#b96f4d', roughness: 0.65, emissive: '#29100b', emissiveIntensity: 0.14
+    color: '#b96f4d',
+    roughness: 0.65,
+    transparent: true,
+    opacity: 0.34,
+    depthWrite: false,
+    emissive: '#29100b',
+    emissiveIntensity: 0.14
   }));
   mesh.position.set(0, 1.4, 0.12);
   return mesh;
@@ -76,8 +86,46 @@ function highlight(object: THREE.Object3D, active: boolean) {
   });
 }
 
+function makeVesselMesh(
+  points: readonly Point3[],
+  radius: number,
+  color: string,
+  opacity: number
+): THREE.Mesh | null {
+  if (points.length < 2) return null;
+  const curvePoints = points.map(([x, y, z]) => new THREE.Vector3(x, y, z));
+  const curve = new THREE.CatmullRomCurve3(curvePoints, false, 'catmullrom', 0.35);
+  const geometry = new THREE.TubeGeometry(curve, Math.max(24, points.length * 12), radius, 12, false);
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.38,
+    metalness: 0.04,
+    transparent: opacity < 0.98,
+    opacity,
+    depthWrite: opacity >= 0.98,
+    emissive: color,
+    emissiveIntensity: 0.08
+  });
+  return new THREE.Mesh(geometry, material);
+}
+
+function clearGroup(group: THREE.Group) {
+  const children = [...group.children];
+  group.clear();
+  children.forEach((child) => {
+    child.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+      if (mesh.material) {
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        materials.forEach((material) => material.dispose());
+      }
+    });
+  });
+}
+
 export default function EmbryoScene({
-  stage, visibleLayers, selectedStructure, cameraPreset, onSelectStructure
+  stage, profile, visibleLayers, selectedStructure, cameraPreset, onSelectStructure
 }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<SceneApi | null>(null);
@@ -179,6 +227,10 @@ export default function EmbryoScene({
     axes.position.set(-3.05, -1.72, 0.3);
     add('orientation-axes', axes);
 
+    VITELLINE_SEGMENTS.forEach((segment) => {
+      add(segment.id, new THREE.Group());
+    });
+
     const grid = new THREE.GridHelper(12, 24, '#244057', '#172b3d');
     grid.position.y = -3.1;
     const gridMaterial = grid.material as THREE.Material;
@@ -242,8 +294,38 @@ export default function EmbryoScene({
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
-    api.objects.forEach((object, id) => { object.visible = visibleLayers[id] ?? true; });
+    const vesselIds = new Set(VITELLINE_SEGMENTS.map((segment) => segment.id));
+    api.objects.forEach((object, id) => {
+      if (!vesselIds.has(id)) object.visible = visibleLayers[id] ?? true;
+    });
   }, [visibleLayers]);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    const stageId = stage.id as VitellineStageId;
+    VITELLINE_SEGMENTS.forEach((segment) => {
+      const group = api.objects.get(segment.id) as THREE.Group | undefined;
+      if (!group) return;
+      clearGroup(group);
+      const presentation = getVesselPresentation(segment, profile, stageId);
+      group.visible = (visibleLayers[segment.id] ?? true) && presentation.visible;
+      group.userData.vesselState = presentation.state;
+      group.userData.statusLabel = presentation.statusLabel;
+      presentation.paths.forEach((path) => {
+        const mesh = makeVesselMesh(
+          path,
+          segment.radius * presentation.radiusScale,
+          segment.color,
+          presentation.opacity
+        );
+        if (!mesh) return;
+        mesh.userData.structureId = segment.id;
+        group.add(mesh);
+      });
+      highlight(group, segment.id === selectedStructure);
+    });
+  }, [stage, profile, visibleLayers, selectedStructure]);
 
   useEffect(() => {
     const api = apiRef.current;
