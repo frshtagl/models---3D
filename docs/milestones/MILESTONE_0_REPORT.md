@@ -42,6 +42,7 @@ Existing user work was preserved. No force-push, deletion, or history rewrite wa
 
 ## 4. Files delivered in this milestone
 
+- README.md
 - docs/prompts/VITELLINE_VEINS_MASTER_PROMPT.md
 - docs/anatomy/vitelline-veins/DEVELOPMENTAL_SPEC.md
 - docs/anatomy/vitelline-veins/FATE_MAP.md
