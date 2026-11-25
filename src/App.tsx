@@ -15,6 +15,7 @@ import type { StructureVisibility } from './data/structures';
 import { VITELLINE_NODES, VITELLINE_SEGMENTS, VITELLINE_NETWORK_ISSUES, getVesselPresentation } from './data/vitellineNetwork';
 import type { VitellineStageId } from './data/vitellineNetwork';
 import { HEPATIC_VASCULAR_LAYERS, HEPATIC_VASCULAR_NODES, HEPATIC_VASCULAR_NETWORK_ISSUES, getHepaticLayerPresentation } from './data/hepaticVascularNetwork';
+import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_NETWORK_ISSUES, getIntervitellinePresentation } from './data/intervitellineNetwork';
 
 const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
   { id: 'anterior', label: 'Anterior' },
@@ -26,11 +27,11 @@ const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
 ];
 
 export default function App() {
-  const [stageIndex, setStageIndex] = useState(0);
+  const [stageIndex, setStageIndex] = useState(2);
   const [profile, setProfile] = useState<EvidenceProfile>('human-2017');
-  const [cameraPreset, setCameraPreset] = useState<CameraPreset>('oblique');
+  const [cameraPreset, setCameraPreset] = useState<CameraPreset>('posterior');
   const [visibleLayers, setVisibleLayers] = useState<StructureVisibility>(() => ({ ...DEFAULT_VISIBILITY }));
-  const [selectedStructure, setSelectedStructure] = useState<string | null>('hepatic-sinusoidal-plexus');
+  const [selectedStructure, setSelectedStructure] = useState<string | null>('human-dorsal-extrahepatic-anastomosis');
   const [playing, setPlaying] = useState(false);
 
   const stage = DEVELOPMENT_STAGES[stageIndex];
@@ -43,8 +44,13 @@ export default function App() {
   const selectedHepaticPresentation = selectedHepaticLayer
     ? getHepaticLayerPresentation(selectedHepaticLayer, profile, stage.id as VitellineStageId)
     : null;
-  const networkIssues = [...VITELLINE_NETWORK_ISSUES, ...HEPATIC_VASCULAR_NETWORK_ISSUES];
+  const selectedAnastomosis = INTERVITELLINE_ANASTOMOSES.find((item) => item.id === selectedStructure);
+  const selectedAnastomosisPresentation = selectedAnastomosis
+    ? getIntervitellinePresentation(selectedAnastomosis, profile, stage.id as VitellineStageId)
+    : null;
+  const networkIssues = [...VITELLINE_NETWORK_ISSUES, ...HEPATIC_VASCULAR_NETWORK_ISSUES, ...INTERVITELLINE_NETWORK_ISSUES];
   const hepaticPathCount = HEPATIC_VASCULAR_LAYERS.reduce((total, layer) => total + layer.paths.length, 0);
+  const intervitellinePointCount = INTERVITELLINE_ANASTOMOSES.reduce((total, item) => total + item.points.length, 0);
 
   useEffect(() => {
     if (!playing) return;
@@ -84,7 +90,7 @@ export default function App() {
         <div className="topbar-right">
           <span className="status-dot" />
           <span>LOCAL INTERACTIVE MODULE</span>
-          <span className="version-chip">v0.3 · HEPATIC SINUSOIDAL NETWORK</span>
+          <span className="version-chip">v0.4 · INTERVITELLINE ANASTOMOSES</span>
         </div>
       </header>
 
@@ -110,7 +116,7 @@ export default function App() {
             <p className="profile-description">{PROFILE_DESCRIPTIONS[profile]}</p>
             <div className="profile-note">
               <span className="note-icon">i</span>
-              {profile === 'human-2017' ? 'Human reconstruction: sinusoids enter from the venous sinus; right portal branches are shown from the right vitelline conduit. Left portal branches from the left umbilical vein are outside this vitelline-only module.' : 'Classical account: venae advehentes carry blood toward sinusoids and venae revehentes drain toward cranial outflow. Their anastomotic boundary geometry is deferred to Milestone 4.'}
+              {profile === 'human-2017' ? 'Human reconstruction: the dorsal extrahepatic intervitelline connection is shown caudal to the dorsal pancreatic bud; the smaller ventral connection is shown only at CS14. Neither is merged with the classical four-connection scheme.' : 'Classical account: three prehepatic connections (cranial ventral, middle dorsal and caudal ventral) plus a subdiaphragmatic connection are shown as a separate topology. The subhepatic connection is distinct from the human umbilico-vitelline portal-sinus shunt.'}
             </div>
           </section>
 
@@ -156,8 +162,8 @@ export default function App() {
         <section className="viewer-column">
           <div className="viewer-toolbar">
             <div>
-              <div className="eyebrow">INTERACTIVE HEPATIC VASCULAR NETWORK</div>
-              <h1>Sinusoids & hepatic channels <span>/ {stage.label}</span></h1>
+              <div className="eyebrow">INTERACTIVE INTERVITELLINE NETWORK</div>
+              <h1>Vitelline anastomoses <span>/ {stage.label}</span></h1>
             </div>
             <div className="camera-toolbar">
               {CAMERA_PRESETS.map((preset) => (
@@ -198,6 +204,9 @@ export default function App() {
               <span><i className="legend-dot sinusoid-dot" /> Sinusoids</span>
               <span><i className="legend-dot afferent-dot" /> Afferent</span>
               <span><i className="legend-dot efferent-dot" /> Efferent / drainage</span>
+              <span><i className="legend-dot classical-iva-dot" /> Classical IVA</span>
+              <span><i className="legend-dot human-iva-dot" /> Human 2017 IVA</span>
+              <span><i className="legend-dot pancreas-dot" /> Dorsal pancreatic bud</span>
             </div>
             <div className="scene-instruction">DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM <span>·</span> RIGHT-DRAG TO PAN</div>
             <div className="schematic-stamp">SCHEMATIC · NOT TO SCALE</div>
@@ -291,6 +300,21 @@ export default function App() {
                     <div className="source-meta">Evidence register: {selectedHepaticLayer.sourceIds.join(' · ')}</div>
                   </>
                 )}
+                {selectedAnastomosis && selectedAnastomosisPresentation && (
+                  <>
+                    <div className="vessel-state-card">
+                      <div className="section-label">DEVELOPMENTAL STATE</div>
+                      <strong>{selectedAnastomosisPresentation.statusLabel}</strong>
+                      <small>{selectedAnastomosis.profile === 'classical-2008' ? 'Classical teaching model · 2008' : 'Human 3D reconstruction · 2017'} · {selectedAnastomosis.points.length} centre-line points</small>
+                    </div>
+                    <div className="inspector-meta">
+                      <span>Topological position</span>
+                      <strong>{selectedAnastomosis.topologyRole}</strong>
+                    </div>
+                    <p className="evidence-note">{selectedAnastomosis.evidence[profile]}</p>
+                    <div className="source-meta">Evidence register: {selectedAnastomosis.sourceIds.join(' · ')}</div>
+                  </>
+                )}
                 <div className="inspector-meta">
                   <span>Stage context</span>
                   <strong>{stage.label}</strong>
@@ -307,21 +331,21 @@ export default function App() {
               <span className={networkIssues.length === 0 ? 'status-dot' : 'status-dot warning-dot'} />
               {networkIssues.length === 0 ? 'Vessel graph checks passed' : networkIssues.length + ' graph issues found'}
             </div>
-            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {hepaticPathCount} hepatic paths · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length} graph nodes.</p>
-            <p>Classical anastomosis geometry and the left umbilical-derived portal branches remain outside this milestone.</p>
+            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {INTERVITELLINE_ANASTOMOSES.length} profile-specific anastomoses · {intervitellinePointCount} IVA centre-line points · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length} venous graph nodes.</p>
+            <p>Classical: four connections. Human 2017: dorsal plus CS14 transient ventral. The two topologies are never displayed together.</p>
             {networkIssues.length > 0 && (
               <ul className="network-issues">{networkIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
             )}
             <div className="scope-progress"><span /></div>
-            <div className="scope-foot"><span>Milestone 3 · hepatic microvasculature</span><strong>IMPLEMENTED</strong></div>
+            <div className="scope-foot"><span>Milestone 4 · intervitelline topology</span><strong>IMPLEMENTED</strong></div>
           </section>
         </aside>
       </main>
 
       <footer className="app-footer">
-        <span>EMBRYOLAB <b>·</b> HEPATIC VASCULAR DEVELOPMENT</span>
+        <span>EMBRYOLAB <b>·</b> INTERVITELLINE DEVELOPMENT</span>
         <span>Human development · Evidence-aware · Procedural reference geometry</span>
-        <span>Development build 0.3.0</span>
+        <span>Development build 0.4.0</span>
       </footer>
     </div>
   );

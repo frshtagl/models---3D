@@ -121,4 +121,4 @@ See docs/anatomy/vitelline-veins/REFERENCES.md and SINUSOIDAL_DEVELOPMENT.md for
 
 ## 10. Next milestone
 
-Milestone 4 will implement the model-specific extrahepatic intervitelline anastomoses. The classical three prehepatic plus subdiaphragmatic scheme and the 2017 dorsal plus transient ventral arrangement will remain separate selectable topologies.
+Milestone 4 adds model-specific extrahepatic intervitelline anastomoses. The classical three prehepatic plus subdiaphragmatic scheme and the 2017 dorsal plus transient ventral arrangement are separate selectable topologies; see MILESTONE_4_REPORT.md.

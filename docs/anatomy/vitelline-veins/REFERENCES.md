@@ -46,7 +46,8 @@
 - sinusoidal entry from the venous sinus and formation of an intrahepatic network;
 - retrograde development of asymmetric draining veins from hepatocardiac channels;
 - right-left asymmetry of intrahepatic vitelline conduits;
-- dorsal and transient ventral extrahepatic intervitelline connections;
+- dorsal extrahepatic intervitelline connection just caudal to the dorsal pancreatic bud at CS13 and well formed by early CS14;
+- smaller, more caudal ventral extrahepatic connection temporarily present during CS14 only;
 - left-sided midgut-derived portal precursor;
 - portal sinus and venous duct shunt interpretation;
 - right versus left intrahepatic portal branch lineage.

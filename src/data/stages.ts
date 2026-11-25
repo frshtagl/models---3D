@@ -38,7 +38,8 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     events: [
       'Separate hepatoblast cords from endothelial sinusoidal channels.',
       'The sinusoidal plexus is a schematic microvascular network, not a measured capillary reconstruction.',
-      'Keep the classical and human-reconstruction explanations of sinusoidal origin distinct.'
+      'Keep the classical and human-reconstruction explanations of sinusoidal origin distinct.',
+      'The classical middle dorsal intervitelline connection is described as the first prehepatic anastomosis to appear (3.5–4 mm embryo); its CS12 display is an approximate teaching bin.'
     ],
     liverScale: 0.66,
     duodenumScale: 0.82
@@ -53,7 +54,8 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     events: [
       'The classical afferent and efferent channels are separate from the sinusoidal mesh.',
       'The human-reconstruction profile keeps the larger vitelline conduits identifiable after enclosure.',
-      'Do not treat a schematic plexus path as a measured embryonic capillary.'
+      'Do not treat a schematic plexus path as a measured embryonic capillary.',
+      'The human reconstruction reports a dorsal extrahepatic intervitelline connection just caudal to the dorsal pancreatic bud at CS13.'
     ],
     liverScale: 0.82,
     duodenumScale: 0.9
@@ -68,7 +70,8 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     events: [
       'The human profile shows a right-dominant hepatic draining network developing from the hepatocardiac channel.',
       'The left portal branches are umbilical-derived in the 2017 reconstruction and are not drawn in this vitelline-only module.',
-      'The transient ventral intervitelline connection is a separate extrahepatic feature.'
+      'The transient ventral intervitelline connection is a separate extrahepatic feature.',
+      'The human reconstruction describes a much smaller, more caudal ventral connection temporarily during CS14 only; it is not the classical caudal-ventral connection.'
     ],
     liverScale: 0.98,
     duodenumScale: 0.96
@@ -83,7 +86,8 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     events: [
       'Right portal branches are shown emerging from the right intrahepatic vitelline conduit.',
       'Left portal branches are not vitelline-derived in the 2017 reconstruction and remain outside this module.',
-      'The portal sinus and venous duct are distinct shunts and are deferred to later milestones.'
+      'The portal sinus and venous duct are distinct shunts and are deferred to later milestones.',
+      'The human dorsal anastomosis is not separately resolved after early CS14 in the cited description; this model does not infer that it regressed.'
     ],
     liverScale: 1.08,
     duodenumScale: 1.0
@@ -111,6 +115,6 @@ export const PROFILE_LABELS: Record<EvidenceProfile, string> = {
 };
 
 export const PROFILE_DESCRIPTIONS: Record<EvidenceProfile, string> = {
-  'classical-2008': 'Classical vestigial / anastomotic interpretation summarized by Collardeau-Frachon and Scoazec. Includes the sinusoidal plexus, venae advehentes and venae revehentes; its three prehepatic plus subdiaphragmatic connection scheme remains distinct.',
-  'human-2017': 'Human embryo reconstruction interpretation reported by Hikspoors and colleagues. Sinusoids enter from the venous sinus, larger conduits remain temporarily identifiable and a right-dominant drainage network develops. Its dorsal and transient ventral connections are not blended with the classical scheme.'
+  'classical-2008': 'Classical vestigial / anastomotic interpretation summarized by Collardeau-Frachon and Scoazec. Includes three prehepatic intervitelline connections (cranial ventral / subhepatic, middle dorsal / retroduodenal, caudal ventral) plus a fourth subdiaphragmatic connection, alongside the sinusoidal plexus, venae advehentes and venae revehentes.',
+  'human-2017': 'Human embryo reconstruction interpretation reported by Hikspoors and colleagues. Sinusoids enter from the venous sinus, larger conduits remain temporarily identifiable and a right-dominant drainage network develops. It shows a dorsal extrahepatic intervitelline connection caudal to the dorsal pancreatic bud at CS13 and a smaller transient ventral connection during CS14 only; these are not blended with the classical four-connection scheme.'
 };

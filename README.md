@@ -5,10 +5,10 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 ## Current status
 
 - **Development branch:** feature/vitelline-veins-3d
-- **Current milestone:** Milestone 3 — hepatic sinusoidal plexus and intrahepatic venous pathways
+- **Current milestone:** Milestone 4 — profile-specific intervitelline anastomoses
 - **Application:** React + TypeScript + Vite + Three.js
-- **Anatomy status:** paired vitelline channels plus a profile-aware hepatic sinusoidal network and selected afferent / efferent pathways
-- **Verification:** graph checks passed; GitHub Actions TypeScript validation and production build passed; browser visual review pending
+- **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, and six profile-specific intervitelline anastomosis layers with embedded parent-vessel attachment nodes
+- **Verification:** source graph checks implemented; Milestone 4 GitHub Actions and browser verification pending
 - **Scientific profiles:** stage-aware classical 2008 synthesis and human 2017 reconstruction profiles
 
 ## Run locally
@@ -35,10 +35,13 @@ Production verification:
 - Select structures from the scene or anatomy layer list.
 - Toggle layer visibility or isolate the selected structure.
 - Switch the scientific evidence profile; the profile changes left-sided remodeling states without blending the two published models.
-- Inspect eight vitelline-vein segments connected through ten named graph nodes.
+- Inspect eight vitelline-vein segments connected through twenty named vitelline graph nodes, including ten embedded anastomosis attachment points.
 - Inspect seven hepatic vascular layers containing 33 editable paths, including a connected sinusoidal plexus.
 - Compare classical venae advehentes / revehentes with human-reconstruction sinusoidal entry and right-dominant hepatic drainage.
 - Inspect right vitelline-derived portal branches without mislabelling the left umbilical-derived portal branches.
+- Inspect four classical intervitelline connections or the two human-reconstruction connections without overlaying incompatible models.
+- Inspect the human dorsal connection relative to the dorsal pancreatic bud and the transient CS14 ventral connection.
+- Navigate dorsal / posterior and ventral / anterior anastomoses relative to the duodenum.
 - Follow the paired yolk-sac roots, extrahepatic trunks, intrahepatic conduits and hepatocardiac channels.
 - Inspect the stage-dependent right-sided dominance and the profile-specific left-sided remodeling.
 
@@ -68,6 +71,9 @@ They must not be blended into one invented developmental sequence. Each profile 
 12. [Vessel graph schema](docs/architecture/VESSEL_GRAPH_SCHEMA.md)
 13. [Hepatic vascular graph](docs/architecture/HEPATIC_VASCULAR_GRAPH.md)
 14. [Sinusoidal development evidence](docs/anatomy/vitelline-veins/SINUSOIDAL_DEVELOPMENT.md)
+15. [Milestone 4 report](docs/milestones/MILESTONE_4_REPORT.md)
+16. [Intervitelline anastomosis anatomy guide](docs/anatomy/vitelline-veins/INTERVITELLINE_ANASTOMOSES.md)
+17. [Intervitelline graph architecture](docs/architecture/INTERVITELLINE_GRAPH.md)
 
 ## Planned development
 
@@ -75,8 +81,8 @@ They must not be blended into one invented developmental sequence. Each profile 
 - Milestone 1: browser application shell and navigatable 3D anatomical blockout.
 - Milestone 2: paired vitelline veins and yolk-sac drainage — implemented; the current branch CI build also compiles this milestone.
 - Milestone 3: hepatic sinusoidal plexus and intrahepatic venous pathways — implemented; TypeScript and production build passed; browser visual review pending.
-- Milestone 4: model-specific intervitelline anastomoses.
-- Milestone 5: regression, portal vein and lineage tracing.
+- Milestone 4: model-specific intervitelline anastomoses — source implementation added; topology / CI / browser verification pending.
+- Milestone 5: portal trunk, portal sinus and competing lineage tracing.
 - Milestone 6: hepatic outflow and context-only fetal circulation.
 - Milestone 7: learning, exploration and assessment tools.
 - Milestone 8: scientific review, verification and release.

@@ -88,7 +88,7 @@ button:disabled { cursor: not-allowed; opacity: 0.38; }
 .orientation-title { margin-bottom: 7px; color: #7f9bb4; font-size: 8px; font-weight: 700; letter-spacing: .13em; }
 .orientation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; color: #8fa7bc; font-size: 9px; }
 .orientation-grid b { display: inline-block; min-width: 19px; color: #d5e8f5; font-size: 10px; }
-.viewport-legend { position: absolute; left: 14px; bottom: 13px; display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 10px; border: 1px solid rgba(146,178,207,.13); border-radius: 6px; background: rgba(7,17,31,.7); color: #a6b8c8; font-size: 9px; pointer-events: none; }
+.viewport-legend { position: absolute; left: 14px; bottom: 13px; max-width: min(72%, 540px); display: flex; flex-wrap: wrap; gap: 9px 12px; padding: 8px 10px; border: 1px solid rgba(146,178,207,.13); border-radius: 6px; background: rgba(7,17,31,.7); color: #a6b8c8; font-size: 9px; pointer-events: none; }
 .viewport-legend span { display: flex; align-items: center; gap: 6px; }
 .legend-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .liver-dot { background: #b96f4d; }
@@ -182,6 +182,9 @@ button:disabled { cursor: not-allowed; opacity: 0.38; }
 .sinusoid-dot { background: #e6c77a; box-shadow: 0 0 8px rgba(230,199,122,.45); }
 .afferent-dot { background: #58c7a8; box-shadow: 0 0 8px rgba(88,199,168,.45); }
 .efferent-dot { background: #ef9b72; box-shadow: 0 0 8px rgba(239,155,114,.45); }
+.classical-iva-dot { background: #5bc9a8; box-shadow: 0 0 8px rgba(91,201,168,.5); }
+.human-iva-dot { background: #e7b86a; box-shadow: 0 0 8px rgba(231,184,106,.5); }
+.pancreas-dot { background: #d9a46e; box-shadow: 0 0 8px rgba(217,164,110,.45); }
 .left-vein-dot { background: #a58de4; box-shadow: 0 0 8px rgba(165,141,228,.45); }
 .vessel-state-card { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; padding: 10px; border: 1px solid rgba(113,183,223,.2); border-radius: 7px; background: rgba(80,145,183,.08); }
 .vessel-state-card strong { color: #cce8f7; font-size: 10px; font-weight: 650; }

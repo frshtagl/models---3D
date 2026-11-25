@@ -119,7 +119,17 @@ export const VITELLINE_NODES: VesselNode[] = [
     position: point(-0.25, 2.82, 0.2),
     description: 'Left-sided entry region at the sinus venosus / venous pole.',
     terminal: true
-  }
+  },
+  { id: 'node-right-iva-subhepatic', label: 'Right subhepatic anastomosis attachment', position: point(0.996, 0.62, 0.22), description: 'Embedded attachment point on the right extrahepatic vitelline trunk for the classical subhepatic connection.' },
+  { id: 'node-left-iva-subhepatic', label: 'Left subhepatic anastomosis attachment', position: point(-0.996, 0.62, 0.22), description: 'Embedded attachment point on the left extrahepatic vitelline trunk for the classical subhepatic connection.' },
+  { id: 'node-right-iva-middle-dorsal', label: 'Right middle dorsal anastomosis attachment', position: point(1.076, -0.1, 0.037), description: 'Embedded attachment point on the right extrahepatic vitelline trunk for the dorsal / retroduodenal connection.' },
+  { id: 'node-left-iva-middle-dorsal', label: 'Left middle dorsal anastomosis attachment', position: point(-1.076, -0.1, 0.037), description: 'Embedded attachment point on the left extrahepatic vitelline trunk for the dorsal / retroduodenal connection.' },
+  { id: 'node-right-iva-caudal-ventral', label: 'Right caudal ventral anastomosis attachment', position: point(0.99, -0.78, -0.18), description: 'Embedded attachment point on the right extrahepatic vitelline trunk for the inferior prehepatic connection.' },
+  { id: 'node-left-iva-caudal-ventral', label: 'Left caudal ventral anastomosis attachment', position: point(-0.99, -0.78, -0.18), description: 'Embedded attachment point on the left extrahepatic vitelline trunk for the inferior prehepatic connection.' },
+  { id: 'node-right-iva-subdiaphragmatic', label: 'Right subdiaphragmatic anastomosis attachment', position: point(0.38, 2.44, 0.217), description: 'Embedded attachment point on the right hepatocardiac channel, immediately below the venous pole.' },
+  { id: 'node-left-iva-subdiaphragmatic', label: 'Left subdiaphragmatic anastomosis attachment', position: point(-0.38, 2.44, 0.217), description: 'Embedded attachment point on the left hepatocardiac channel, immediately below the venous pole.' },
+  { id: 'node-right-iva-human-ventral', label: 'Right transient ventral anastomosis attachment', position: point(1.041, -0.54, -0.094), description: 'Embedded attachment point for the more caudal, transient ventral connection reported in the human reconstruction.' },
+  { id: 'node-left-iva-human-ventral', label: 'Left transient ventral anastomosis attachment', position: point(-1.041, -0.54, -0.094), description: 'Embedded attachment point for the more caudal, transient ventral connection reported in the human reconstruction.' }
 ];
 
 const rightStates = {
@@ -193,13 +203,16 @@ const rightExtrahepatic: VesselSegment = {
   points: [
     point(0.86, -1.12, -0.32),
     point(0.99, -0.78, -0.18),
+    point(1.041, -0.54, -0.094),
     point(1.08, -0.36, -0.03),
+    point(1.076, -0.1, 0.037),
     point(1.07, 0.3, 0.14),
+    point(0.996, 0.62, 0.22),
     point(0.92, 0.95, 0.3)
   ],
   radius: 0.085,
   color: RIGHT,
-  description: 'The right extrahepatic vitelline trunk is kept lateral to the gut reference. No intervitelline anastomosis is included in this milestone.',
+  description: 'The right extrahepatic vitelline trunk is kept lateral to the gut reference. Named embedded attachment points connect it to the profile-specific anastomosis graph.',
   states: statesFor('right', 'extrahepatic')
 };
 
@@ -233,6 +246,7 @@ const rightHepatocardiac: VesselSegment = {
   points: [
     point(0.3, 2.02, 0.25),
     point(0.34, 2.27, 0.23),
+    point(0.38, 2.44, 0.217),
     point(0.4, 2.54, 0.21),
     point(0.45, 2.82, 0.2)
   ],
@@ -271,13 +285,16 @@ const leftExtrahepatic: VesselSegment = {
   points: [
     point(-0.86, -1.12, -0.32),
     point(-0.99, -0.78, -0.18),
+    point(-1.041, -0.54, -0.094),
     point(-1.08, -0.36, -0.03),
+    point(-1.076, -0.1, 0.037),
     point(-1.07, 0.3, 0.14),
+    point(-0.996, 0.62, 0.22),
     point(-0.92, 0.95, 0.3)
   ],
   radius: 0.085,
   color: LEFT,
-  description: 'The left extrahepatic vitelline trunk is kept lateral to the gut reference. It remains distinct from the later profile-specific portal anastomoses.',
+  description: 'The left extrahepatic vitelline trunk is kept lateral to the gut reference. Named embedded attachment points connect it to the profile-specific anastomosis graph.',
   states: statesFor('left', 'extrahepatic')
 };
 
@@ -327,6 +344,7 @@ const leftHepatocardiac: VesselSegment = {
   points: [
     point(-0.3, 2.02, 0.25),
     point(-0.34, 2.27, 0.23),
+    point(-0.38, 2.44, 0.217),
     point(-0.3, 2.54, 0.21),
     point(-0.25, 2.82, 0.2)
   ],
@@ -348,10 +366,10 @@ const leftHepatocardiac: VesselSegment = {
     },
     'classical-2008': {
       cs15: [
-        [point(-0.29, 2.05, 0.25), point(-0.27, 2.16, 0.23)]
+        [point(-0.29, 2.05, 0.25), point(-0.34, 2.27, 0.23), point(-0.38, 2.44, 0.217)]
       ],
       cs16: [
-        [point(-0.26, 2.14, 0.23), point(-0.25, 2.2, 0.22)]
+        [point(-0.26, 2.14, 0.23), point(-0.34, 2.3, 0.22), point(-0.38, 2.44, 0.217)]
       ]
     }
   }

@@ -7,6 +7,7 @@ import type { EvidenceProfile } from '../data/stages';
 import { VITELLINE_SEGMENTS, getVesselPresentation } from '../data/vitellineNetwork';
 import type { Point3, VitellineStageId } from '../data/vitellineNetwork';
 import { HEPATIC_VASCULAR_LAYERS, getHepaticLayerPresentation } from '../data/hepaticVascularNetwork';
+import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_LANDMARKS, getIntervitellinePresentation } from '../data/intervitellineNetwork';
 
 export type CameraPreset = 'anterior' | 'posterior' | 'right' | 'left' | 'superior' | 'inferior' | 'oblique' | 'reset';
 
@@ -70,6 +71,28 @@ function makeLiver() {
     emissiveIntensity: 0.14
   }));
   mesh.position.set(0, 1.4, 0.12);
+  return mesh;
+}
+
+function makeDorsalPancreaticBud() {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 28, 20),
+    new THREE.MeshStandardMaterial({
+      color: '#d9a46e',
+      roughness: 0.62,
+      transparent: true,
+      opacity: 0.82,
+      depthWrite: false,
+      emissive: '#3b2411',
+      emissiveIntensity: 0.08
+    })
+  );
+  mesh.scale.set(1.45, 0.58, 0.78);
+  mesh.position.set(
+    INTERVITELLINE_LANDMARKS[0].position[0],
+    INTERVITELLINE_LANDMARKS[0].position[1],
+    INTERVITELLINE_LANDMARKS[0].position[2]
+  );
   return mesh;
 }
 
@@ -189,6 +212,8 @@ export default function EmbryoScene({
       new THREE.Vector3(-0.22, -0.91, -0.02)
     ], 0.19, '#dcae7a'));
 
+    add('dorsal-pancreatic-bud', makeDorsalPancreaticBud());
+
     add('foregut', tube([
       new THREE.Vector3(-0.55, 2.25, -0.08),
       new THREE.Vector3(-0.48, 1.88, -0.08),
@@ -233,6 +258,9 @@ export default function EmbryoScene({
     });
     HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
       add(layer.id, new THREE.Group());
+    });
+    INTERVITELLINE_ANASTOMOSES.forEach((item) => {
+      add(item.id, new THREE.Group());
     });
 
     const grid = new THREE.GridHelper(12, 24, '#244057', '#172b3d');
@@ -307,7 +335,8 @@ export default function EmbryoScene({
     if (!api) return;
     const vesselIds = new Set([
       ...VITELLINE_SEGMENTS.map((segment) => segment.id),
-      ...HEPATIC_VASCULAR_LAYERS.map((layer) => layer.id)
+      ...HEPATIC_VASCULAR_LAYERS.map((layer) => layer.id),
+      ...INTERVITELLINE_ANASTOMOSES.map((item) => item.id)
     ]);
     api.objects.forEach((object, id) => {
       if (!vesselIds.has(id)) object.visible = visibleLayers[id] ?? true;
@@ -372,9 +401,41 @@ export default function EmbryoScene({
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
+    const stageId = stage.id as VitellineStageId;
+    INTERVITELLINE_ANASTOMOSES.forEach((item) => {
+      const group = api.objects.get(item.id) as THREE.Group | undefined;
+      if (!group) return;
+      clearGroup(group);
+      const presentation = getIntervitellinePresentation(item, profile, stageId);
+      group.visible = (visibleLayers[item.id] ?? true) && presentation.visible;
+      group.userData.vesselState = presentation.state;
+      group.userData.statusLabel = presentation.statusLabel;
+      const mesh = makeVesselMesh(
+        item.points,
+        item.radius * presentation.radiusScale,
+        item.color,
+        presentation.opacity
+      );
+      if (mesh) {
+        mesh.userData.structureId = item.id;
+        mesh.userData.anastomosisId = item.id;
+        group.add(mesh);
+      }
+      highlight(group, item.id === selectedStructure);
+    });
+  }, [stage, profile, visibleLayers, selectedStructure]);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api) return;
     api.objects.get('liver')?.scale.setScalar(stage.liverScale);
     api.objects.get('duodenum')?.scale.setScalar(stage.duodenumScale);
-  }, [stage]);
+    const pancreas = api.objects.get('dorsal-pancreatic-bud');
+    if (pancreas) {
+      pancreas.visible = (visibleLayers['dorsal-pancreatic-bud'] ?? true)
+        && ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
+    }
+  }, [stage, visibleLayers]);
 
   useEffect(() => {
     const api = apiRef.current;
