@@ -1,6 +1,6 @@
 # Milestone 6 — Hepatic Outflow, Venous Duct and Hepatic IVC Contribution
 
-**Status:** Source implementation added; graph audit and GitHub Actions verification pending  
+**Status:** Implemented; source graph and teaching-step validation passed; GitHub Actions TypeScript validation and production build passed; browser visual review pending  
 **Date:** 25 November 2026  
 **Branch:** feature/vitelline-veins-3d  
 **Version:** 0.6.0
@@ -104,6 +104,16 @@ The new source graph validator checks:
 - correct human venous-duct origin and right hepatocardiac destination;
 - a separately narrowed human venous-duct segment;
 - exactly three human terminal hepatic-vein collectors.
+
+At commit 5efc8eb2b8e71a4669e81d4b98d8778600ec00eb, the independent source audit checked 6 layers, 10 paths, 58 source graph nodes and 7 flow arrows. It also verified all 14 guided steps against the anatomy-layer registry; no unknown selected structures or visible layers were found.
+
+GitHub Actions: https://github.com/frshtagl/models---3D/actions/runs/45677428811
+
+- TypeScript validation: passed.
+- Hepatic-outflow graph and teaching-step validation: passed.
+- Production build: passed.
+- Browser visual review: pending.
+- Specialist embryology review: pending.
 
 These deterministic source checks do not replace visual inspection in a browser or specialist embryology review.
 

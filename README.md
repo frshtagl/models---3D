@@ -8,7 +8,7 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 - **Current milestone:** Milestone 6 — hepatic outflow, terminal hepatic veins and ductus venosus
 - **Application:** React + TypeScript + Vite + Three.js
 - **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, classical and human portal pathways, six hepatic-outflow layers, ten new outflow paths, two ductus-venosus mechanisms, terminal hepatic-vein collectors and flow-direction arrows
-- **Verification:** source graph validation added; GitHub Actions verification pending; browser visual review pending
+- **Verification:** TypeScript validation, hepatic-outflow graph validation and production build passed in GitHub Actions; browser visual review pending
 - **Scientific profiles:** classical 2008 synthesis and human 2017 reconstruction, supplemented by 2024 CS15 venous-route morphology
 
 ## Run locally
@@ -98,7 +98,7 @@ They must not be blended into one invented developmental sequence. Each profile 
 - Milestone 3: hepatic sinusoidal plexus and intrahepatic venous pathways — implemented; TypeScript and production build passed; browser visual review pending.
 - Milestone 4: model-specific intervitelline anastomoses — implemented; attachment audit, TypeScript validation and production build passed; browser visual review pending.
 - Milestone 5: portal trunk, portal sinus, first-order portal branches and browser teaching walkthrough — implemented; portal-path / attachment audit and GitHub Actions typecheck / production build passed; browser visual review pending.
-- Milestone 6: classical hepatic efferent route, human venous duct, classical ductus venosus, terminal hepatic veins and flow arrows — source implementation added; graph / CI / browser verification pending.
+- Milestone 6: classical hepatic efferent route, human venous duct, classical ductus venosus, terminal hepatic veins and flow arrows — implemented; TypeScript, source-graph / teaching-step validation and production build passed; browser visual review pending.
 - Milestone 7: complete paired umbilical-vein system and cardinal venous pathways for the composite IVC.
 - Milestone 8: learning, exploration and assessment tools.
 - Milestone 9: scientific review, verification and release.
