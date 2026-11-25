@@ -331,7 +331,7 @@ export default function App() {
               <span className={networkIssues.length === 0 ? 'status-dot' : 'status-dot warning-dot'} />
               {networkIssues.length === 0 ? 'Vessel graph checks passed' : networkIssues.length + ' graph issues found'}
             </div>
-            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {INTERVITELLINE_ANASTOMOSES.length} profile-specific anastomoses · {intervitellinePointCount} IVA centre-line points · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length} venous graph nodes.</p>
+            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {hepaticPathCount} hepatic paths · {INTERVITELLINE_ANASTOMOSES.length} profile-specific anastomoses · {intervitellinePointCount} IVA centre-line points · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length} venous graph nodes.</p>
             <p>Classical: four connections. Human 2017: dorsal plus CS14 transient ventral. The two topologies are never displayed together.</p>
             {networkIssues.length > 0 && (
               <ul className="network-issues">{networkIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
