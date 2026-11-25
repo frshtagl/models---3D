@@ -23,6 +23,7 @@ Open the local Vite address printed in the terminal.
 Production verification:
 
     npm run typecheck
+    npm run validate:graph
     npm run build
     npm run preview
 
@@ -80,14 +81,14 @@ They must not be blended into one invented developmental sequence. Each profile 
 15. [Milestone 4 report](docs/milestones/MILESTONE_4_REPORT.md)
 16. [Intervitelline anastomosis anatomy guide](docs/anatomy/vitelline-veins/INTERVITELLINE_ANASTOMOSES.md)
 17. [Intervitelline graph architecture](docs/architecture/INTERVITELLINE_GRAPH.md)
+18. [Portal vein development guide](docs/anatomy/vitelline-veins/PORTAL_VEIN_DEVELOPMENT.md)
+19. [Portal vascular graph architecture](docs/architecture/PORTAL_VASCULAR_GRAPH.md)
+20. [Milestone 5 report](docs/milestones/MILESTONE_5_REPORT.md)
+21. [Portal browser teaching guide](docs/teaching/PORTAL_VEIN_BROWSER_TEACHING_GUIDE.md)
 22. [Hepatic outflow and venous duct anatomy](docs/anatomy/vitelline-veins/HEPATIC_OUTFLOW_AND_VENOUS_DUCT.md)
 23. [Hepatic outflow graph architecture](docs/architecture/HEPATIC_OUTFLOW_GRAPH.md)
 24. [Milestone 6 report](docs/milestones/MILESTONE_6_REPORT.md)
 25. [Hepatic outflow browser teaching guide](docs/teaching/HEPATIC_OUTFLOW_BROWSER_TEACHING_GUIDE.md)
-18. [Portal vein development guide](docs/anatomy/vitelline-veins/PORTAL_VEIN_DEVELOPMENT.md)
-19. [Portal vascular graph architecture](docs/architecture/PORTAL_VASCULAR_GRAPH.md)
-20. [Milestone 5 report](docs/milestones/MILESTONE_5_REPORT.md)
-21. [Browser teaching guide](docs/teaching/PORTAL_VEIN_BROWSER_TEACHING_GUIDE.md)
 
 ## Planned development
 
@@ -98,9 +99,9 @@ They must not be blended into one invented developmental sequence. Each profile 
 - Milestone 4: model-specific intervitelline anastomoses — implemented; attachment audit, TypeScript validation and production build passed; browser visual review pending.
 - Milestone 5: portal trunk, portal sinus, first-order portal branches and browser teaching walkthrough — implemented; portal-path / attachment audit and GitHub Actions typecheck / production build passed; browser visual review pending.
 - Milestone 6: classical hepatic efferent route, human venous duct, classical ductus venosus, terminal hepatic veins and flow arrows — source implementation added; graph / CI / browser verification pending.
-- Milestone 6: hepatic outflow, venous duct and context-only fetal circulation.
-- Milestone 7: learning, exploration and assessment tools.
-- Milestone 8: scientific review, verification and release.
+- Milestone 7: complete paired umbilical-vein system and cardinal venous pathways for the composite IVC.
+- Milestone 8: learning, exploration and assessment tools.
+- Milestone 9: scientific review, verification and release.
 
 ## Development principles
 

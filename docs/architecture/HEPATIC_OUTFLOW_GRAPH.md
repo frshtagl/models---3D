@@ -69,7 +69,7 @@ EmbryoScene.tsx creates a cone marker at the terminal tangent of each path with 
 
 ## Validation contracts
 
-The module validator checks:
+Run the independent source audit with `npm run validate:graph`. The production build runs this validator before Vite. It checks:
 - unique layer and path IDs;
 - all path endpoints resolve to nodes from the combined source graphs;
 - first and last centre-line points match declared node coordinates;

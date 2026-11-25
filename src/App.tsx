@@ -30,11 +30,11 @@ const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
 ];
 
 export default function App() {
-  const [stageIndex, setStageIndex] = useState(2);
+  const [stageIndex, setStageIndex] = useState(4);
   const [profile, setProfile] = useState<EvidenceProfile>('human-2017');
-  const [cameraPreset, setCameraPreset] = useState<CameraPreset>('posterior');
+  const [cameraPreset, setCameraPreset] = useState<CameraPreset>('oblique');
   const [visibleLayers, setVisibleLayers] = useState<StructureVisibility>(() => ({ ...DEFAULT_VISIBILITY }));
-  const [selectedStructure, setSelectedStructure] = useState<string | null>('human-portal-trunk');
+  const [selectedStructure, setSelectedStructure] = useState<string | null>('human-ductus-venosus');
   const [playing, setPlaying] = useState(false);
   const [teachingOpen, setTeachingOpen] = useState(false);
   const [teachingStepIndex, setTeachingStepIndex] = useState(0);
