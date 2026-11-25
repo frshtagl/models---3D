@@ -1,4 +1,5 @@
 import { HEPATIC_VASCULAR_LAYERS } from './hepaticVascularNetwork';
+import { HEPATIC_OUTFLOW_LAYERS } from './hepaticOutflowNetwork';
 import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_LANDMARKS } from './intervitellineNetwork';
 import { PORTAL_LANDMARKS, PORTAL_VASCULAR_LAYERS } from './portalNetwork';
 
@@ -28,6 +29,7 @@ export const ANATOMICAL_STRUCTURES: AnatomicalStructure[] = [
   { id: 'vitelline-left-intrahepatic', name: 'Left vitelline vein — intrahepatic conduit', shortName: 'Left intrahepatic conduit', category: 'vessel', description: 'The left intrahepatic vitelline conduit is initially paired with the right. In the 2017 reconstruction it breaks up as a large conduit by early CS14; this does not mean all left intrahepatic vascular channels disappear.', status: 'Vitelline vessel · left', color: '#a58de4' },
   { id: 'vitelline-left-hepatocardiac', name: 'Left hepatocardiac channel — vitelline connection', shortName: 'Left hepatocardiac channel', category: 'vessel', description: 'The shared left hepatocardiac outlet receives vitelline and umbilical contributions. This module shows only its vitelline connection; the channel later becomes incorporated into the sinus venosus wall and regresses as a distinct channel.', status: 'Vitelline vessel · left', color: '#a58de4' },
   ...HEPATIC_VASCULAR_LAYERS.map((layer) => ({ id: layer.id, name: layer.name, shortName: layer.shortName, category: 'vessel' as const, description: layer.description, status: layer.status, color: layer.color })),
+  ...HEPATIC_OUTFLOW_LAYERS.map((layer) => ({ id: layer.id, name: layer.name, shortName: layer.shortName, category: 'vessel' as const, description: layer.description, status: layer.status, color: layer.color })),
   ...INTERVITELLINE_ANASTOMOSES.map((item) => ({ id: item.id, name: item.name, shortName: item.shortName, category: 'vessel' as const, description: item.description, status: item.profile === 'classical-2008' ? 'Classical intervitelline connection' : 'Human reconstruction · intervitelline connection', color: item.color })),
   ...INTERVITELLINE_LANDMARKS.map((item) => ({ id: item.id, name: item.name, shortName: item.name, category: 'landmark' as const, description: item.description, status: 'Stage-specific anatomical landmark', color: '#d9a46e' })),
   ...PORTAL_VASCULAR_LAYERS.map((layer) => ({ id: layer.id, name: layer.name, shortName: layer.shortName, category: layer.category, description: layer.description, status: layer.status, color: layer.color })),

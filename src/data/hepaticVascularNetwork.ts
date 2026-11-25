@@ -209,7 +209,7 @@ export const HEPATIC_VASCULAR_LAYERS: HepaticVascularLayer[] = [
     name: 'Venae revehentes — classical efferent channels',
     shortName: 'Venae revehentes',
     kind: 'efferent',
-    description: 'Efferent channels draining the hepatic sinusoidal plexus toward the cranial / subdiaphragmatic outflow in the classical 2008 account. Their outlet anastomosis is deferred to Milestone 4.',
+    description: 'Efferent channels draining the hepatic sinusoidal plexus toward the cranial / subdiaphragmatic outflow in the classical 2008 account. They represent the primary right and left hepatic draining vessels (venae revehentes) in this simplified early arrangement.',
     status: 'Classical model · efferent',
     color: '#ef9b72',
     radius: 0.031,

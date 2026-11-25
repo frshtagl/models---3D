@@ -7,6 +7,7 @@ import type { EvidenceProfile } from '../data/stages';
 import { VITELLINE_SEGMENTS, getVesselPresentation } from '../data/vitellineNetwork';
 import type { Point3, VitellineStageId } from '../data/vitellineNetwork';
 import { HEPATIC_VASCULAR_LAYERS, getHepaticLayerPresentation } from '../data/hepaticVascularNetwork';
+import { HEPATIC_OUTFLOW_LAYERS, getHepaticOutflowPresentation } from '../data/hepaticOutflowNetwork';
 import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_LANDMARKS, getIntervitellinePresentation } from '../data/intervitellineNetwork';
 import { PORTAL_LANDMARKS, PORTAL_VASCULAR_LAYERS, getPortalLayerPresentation } from '../data/portalNetwork';
 
@@ -153,6 +154,26 @@ function makeVesselMesh(
   return new THREE.Mesh(geometry, material);
 }
 
+function makeFlowArrow(points: readonly Point3[], color: string, radius: number): THREE.Mesh | null {
+  if (points.length < 2) return null;
+  const end = points[points.length - 1];
+  const previous = points[points.length - 2];
+  const direction = new THREE.Vector3(end[0] - previous[0], end[1] - previous[1], end[2] - previous[2]);
+  if (direction.lengthSq() < 1e-8) return null;
+  direction.normalize();
+  const height = Math.max(radius * 4.2, 0.085);
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(Math.max(radius * 1.9, 0.027), height, 12),
+    new THREE.MeshStandardMaterial({
+      color, roughness: 0.34, metalness: 0.02,
+      emissive: color, emissiveIntensity: 0.16
+    })
+  );
+  arrow.position.set(end[0], end[1], end[2]).addScaledVector(direction, -height / 2);
+  arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+  return arrow;
+}
+
 function clearGroup(group: THREE.Group) {
   const children = [...group.children];
   group.clear();
@@ -280,6 +301,9 @@ export default function EmbryoScene({
     HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
       add(layer.id, new THREE.Group());
     });
+    HEPATIC_OUTFLOW_LAYERS.forEach((layer) => {
+      add(layer.id, new THREE.Group());
+    });
     INTERVITELLINE_ANASTOMOSES.forEach((item) => {
       add(item.id, new THREE.Group());
     });
@@ -360,6 +384,7 @@ export default function EmbryoScene({
     const vesselIds = new Set([
       ...VITELLINE_SEGMENTS.map((segment) => segment.id),
       ...HEPATIC_VASCULAR_LAYERS.map((layer) => layer.id),
+      ...HEPATIC_OUTFLOW_LAYERS.map((layer) => layer.id),
       ...INTERVITELLINE_ANASTOMOSES.map((item) => item.id),
       ...PORTAL_VASCULAR_LAYERS.map((layer) => layer.id)
     ]);
@@ -418,6 +443,39 @@ export default function EmbryoScene({
         mesh.userData.structureId = layer.id;
         mesh.userData.pathId = pathItem.id;
         group.add(mesh);
+      });
+      highlight(group, layer.id === selectedStructure);
+    });
+  }, [stage, profile, visibleLayers, selectedStructure]);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    const stageId = stage.id as VitellineStageId;
+    HEPATIC_OUTFLOW_LAYERS.forEach((layer) => {
+      const group = api.objects.get(layer.id) as THREE.Group | undefined;
+      if (!group) return;
+      clearGroup(group);
+      const presentation = getHepaticOutflowPresentation(layer, profile, stageId);
+      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.userData.vesselState = presentation.state;
+      group.userData.statusLabel = presentation.statusLabel;
+      layer.paths.forEach((pathItem) => {
+        const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        if (mesh) {
+          mesh.userData.structureId = layer.id;
+          mesh.userData.pathId = pathItem.id;
+          group.add(mesh);
+        }
+        if (pathItem.flowArrow) {
+          const arrow = makeFlowArrow(pathItem.points, layer.color, radius);
+          if (arrow) {
+            arrow.userData.structureId = layer.id;
+            arrow.userData.pathId = pathItem.id;
+            group.add(arrow);
+          }
+        }
       });
       highlight(group, layer.id === selectedStructure);
     });

@@ -50,10 +50,10 @@ The app is browser-based but is not automatically a hosted public website merely
 2. Select **Teaching guide** in the top-right header.
 3. The first teaching step is applied automatically: evidence profile, Carnegie stage, camera view, selected vessel and relevant visible layers are set together.
 4. Read the learning point and instructor narration.
-5. Use **Next lesson** and **Previous** to move through the nine steps.
+5. Use **Next lesson** and **Previous** to move through the 14-step sequence. The first nine steps cover the portal system; the final five cover hepatic outflow and the venous duct.
 6. Close the card with × to leave the model in its current state. Reopen the guide to resume the selected step.
 
-The guided sequence is designed for an instructor to narrate while projecting the 3D viewport. It is not an automatic animation of every vessel.
+The guided sequence is designed for an instructor to narrate while projecting the 3D viewport. It is not an automatic animation of every vessel. For the final five hepatic-outflow lessons, see the [Hepatic Outflow Browser Teaching Guide](HEPATIC_OUTFLOW_BROWSER_TEACHING_GUIDE.md).
 
 ## 3. Nine-step classroom sequence
 

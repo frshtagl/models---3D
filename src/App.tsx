@@ -17,6 +17,7 @@ import type { VitellineStageId } from './data/vitellineNetwork';
 import { HEPATIC_VASCULAR_LAYERS, HEPATIC_VASCULAR_NODES, HEPATIC_VASCULAR_NETWORK_ISSUES, getHepaticLayerPresentation } from './data/hepaticVascularNetwork';
 import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_NETWORK_ISSUES, getIntervitellinePresentation } from './data/intervitellineNetwork';
 import { PORTAL_NETWORK_ISSUES, PORTAL_NODES, PORTAL_VASCULAR_LAYERS, getPortalLayerPresentation } from './data/portalNetwork';
+import { HEPATIC_OUTFLOW_LAYERS, HEPATIC_OUTFLOW_NODES, HEPATIC_OUTFLOW_NETWORK_ISSUES, getHepaticOutflowPresentation } from './data/hepaticOutflowNetwork';
 import { PORTAL_TEACHING_STEPS } from './data/portalTeachingGuide';
 
 const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
@@ -49,6 +50,10 @@ export default function App() {
   const selectedHepaticPresentation = selectedHepaticLayer
     ? getHepaticLayerPresentation(selectedHepaticLayer, profile, stage.id as VitellineStageId)
     : null;
+  const selectedOutflowLayer = HEPATIC_OUTFLOW_LAYERS.find((item) => item.id === selectedStructure);
+  const selectedOutflowPresentation = selectedOutflowLayer
+    ? getHepaticOutflowPresentation(selectedOutflowLayer, profile, stage.id as VitellineStageId)
+    : null;
   const selectedAnastomosis = INTERVITELLINE_ANASTOMOSES.find((item) => item.id === selectedStructure);
   const selectedAnastomosisPresentation = selectedAnastomosis
     ? getIntervitellinePresentation(selectedAnastomosis, profile, stage.id as VitellineStageId)
@@ -57,11 +62,12 @@ export default function App() {
   const selectedPortalPresentation = selectedPortalLayer
     ? getPortalLayerPresentation(selectedPortalLayer, profile, stage.id as VitellineStageId)
     : null;
-  const networkIssues = [...VITELLINE_NETWORK_ISSUES, ...HEPATIC_VASCULAR_NETWORK_ISSUES, ...INTERVITELLINE_NETWORK_ISSUES, ...PORTAL_NETWORK_ISSUES];
+  const networkIssues = [...VITELLINE_NETWORK_ISSUES, ...HEPATIC_VASCULAR_NETWORK_ISSUES, ...HEPATIC_OUTFLOW_NETWORK_ISSUES, ...INTERVITELLINE_NETWORK_ISSUES, ...PORTAL_NETWORK_ISSUES];
   const hepaticPathCount = HEPATIC_VASCULAR_LAYERS.reduce((total, layer) => total + layer.paths.length, 0);
   const intervitellinePointCount = INTERVITELLINE_ANASTOMOSES.reduce((total, item) => total + item.points.length, 0);
   const portalPathCount = PORTAL_VASCULAR_LAYERS.reduce((total, layer) => total + layer.paths.length, 0);
   const portalNodeCount = PORTAL_NODES.length;
+  const outflowPathCount = HEPATIC_OUTFLOW_LAYERS.reduce((total, layer) => total + layer.paths.length, 0);
   const teachingStep = PORTAL_TEACHING_STEPS[teachingStepIndex];
 
   useEffect(() => {
@@ -153,7 +159,7 @@ export default function App() {
           <span>LOCAL INTERACTIVE MODULE</span>
           <button className="topbar-action" onClick={toggleTeachingGuide}>{teachingOpen ? 'Hide teaching guide' : 'Teaching guide'}</button>
           <button className="topbar-action" onClick={toggleFullscreen}>{isFullscreen ? 'Exit full screen' : 'Full screen'}</button>
-          <span className="version-chip">v0.5 · PORTAL VEIN DEVELOPMENT</span>
+          <span className="version-chip">v0.6 · HEPATIC OUTFLOW</span>
         </div>
       </header>
 
@@ -225,8 +231,8 @@ export default function App() {
         <section className="viewer-column">
           <div className="viewer-toolbar">
             <div>
-              <div className="eyebrow">INTERACTIVE PORTAL VEIN DEVELOPMENT</div>
-              <h1>Portal vein formation <span>/ {stage.label}</span></h1>
+              <div className="eyebrow">INTERACTIVE HEPATIC VENOUS DEVELOPMENT</div>
+              <h1>Hepatic venous development <span>/ {stage.label}</span></h1>
             </div>
             <div className="camera-toolbar">
               {CAMERA_PRESETS.map((preset) => (
@@ -252,10 +258,10 @@ export default function App() {
               onSelectStructure={setSelectedStructure}
             />
             {teachingOpen && teachingStep && (
-              <section className="teaching-card" aria-live="polite" aria-label="Guided portal vein teaching walkthrough">
+              <section className="teaching-card" aria-live="polite" aria-label="Guided hepatic venous teaching walkthrough">
                 <div className="teaching-card-header">
                   <div>
-                    <div className="eyebrow">TEACHING WALKTHROUGH · STEP {teachingStepIndex + 1} / {PORTAL_TEACHING_STEPS.length}</div>
+                    <div className="eyebrow">HEPATIC VENOUS WALKTHROUGH · STEP {teachingStepIndex + 1} / {PORTAL_TEACHING_STEPS.length}</div>
                     <div className="teaching-context">{PROFILE_LABELS[teachingStep.profile]} · {teachingStep.stageId.toUpperCase()}</div>
                   </div>
                   <button className="teaching-close" onClick={() => setTeachingOpen(false)} aria-label="Close teaching guide">×</button>
@@ -294,6 +300,9 @@ export default function App() {
               <span><i className="legend-dot umbilical-dot" /> Left umbilical vein</span>
               <span><i className="legend-dot portal-sinus-dot" /> Portal sinus</span>
               <span><i className="legend-dot portal-branch-dot" /> Portal branches</span>
+              <span><i className="legend-dot ductus-dot" /> Ductus venosus / venous duct</span>
+              <span><i className="legend-dot terminal-hepatic-dot" /> Terminal hepatic veins</span>
+              <span><i className="legend-dot flow-arrow-dot" /> Flow direction</span>
             </div>
             <div className="scene-instruction">DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM <span>·</span> RIGHT-DRAG TO PAN</div>
             <div className="schematic-stamp">SCHEMATIC · NOT TO SCALE</div>
@@ -387,6 +396,27 @@ export default function App() {
                     <div className="source-meta">Evidence register: {selectedHepaticLayer.sourceIds.join(' · ')}</div>
                   </>
                 )}
+                {selectedOutflowLayer && selectedOutflowPresentation && (
+                  <>
+                    <div className="vessel-state-card">
+                      <div className="section-label">DEVELOPMENTAL STATE</div>
+                      <strong>{selectedOutflowPresentation.statusLabel}</strong>
+                      <small>{selectedOutflowLayer.profile === 'classical-2008' ? 'Classical teaching model · 2008' : 'Human reconstruction · 2017 / 2024'} · {selectedOutflowLayer.paths.length} path(s)</small>
+                    </div>
+                    <div className="inspector-meta">
+                      <span>Evidence profile</span>
+                      <strong>{PROFILE_LABELS[profile]}</strong>
+                    </div>
+                    <p className="evidence-note">{selectedOutflowLayer.evidence[profile]}</p>
+                    {selectedOutflowLayer.postnatalFate && (
+                      <div className="postnatal-fate-note">
+                        <strong>Postnatal fate</strong>
+                        <span>{selectedOutflowLayer.postnatalFate}</span>
+                      </div>
+                    )}
+                    <div className="source-meta">Evidence register: {selectedOutflowLayer.sourceIds.join(' · ')}</div>
+                  </>
+                )}
                 {selectedAnastomosis && selectedAnastomosisPresentation && (
                   <>
                     <div className="vessel-state-card">
@@ -433,21 +463,21 @@ export default function App() {
               <span className={networkIssues.length === 0 ? 'status-dot' : 'status-dot warning-dot'} />
               {networkIssues.length === 0 ? 'Vessel graph checks passed' : networkIssues.length + ' graph issues found'}
             </div>
-            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {hepaticPathCount} hepatic paths · {INTERVITELLINE_ANASTOMOSES.length} intervitelline connections · {PORTAL_VASCULAR_LAYERS.length} portal layers · {portalPathCount} portal paths · {intervitellinePointCount} IVA points · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length + portalNodeCount} total venous graph nodes.</p>
-            <p>Classical trunk: left vitelline limb + dorsal anastomosis + right vitelline limb. Human pathway: midgut precursor + dorsal crossing + right vitelline conduit. Portal-sinus mechanisms remain separate.</p>
+            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {hepaticPathCount} hepatic paths · {INTERVITELLINE_ANASTOMOSES.length} intervitelline connections · {PORTAL_VASCULAR_LAYERS.length} portal layers · {portalPathCount} portal paths · {HEPATIC_OUTFLOW_LAYERS.length} hepatic-outflow layers · {outflowPathCount} outflow paths · {intervitellinePointCount} IVA points · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length + portalNodeCount + HEPATIC_OUTFLOW_NODES.length} total venous graph nodes.</p>
+            <p>Classical and human portal-sinus pathways remain separate. Classical and human ductus-venosus routes also remain separate; hepatic outflow arrows show drainage toward the right hepatocardiac / IVC outlet.</p>
             {networkIssues.length > 0 && (
               <ul className="network-issues">{networkIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
             )}
             <div className="scope-progress"><span /></div>
-            <div className="scope-foot"><span>Milestone 5 · portal system</span><strong>IMPLEMENTED</strong></div>
+            <div className="scope-foot"><span>Milestone 6 · hepatic outflow</span><strong>IMPLEMENTED</strong></div>
           </section>
         </aside>
       </main>
 
       <footer className="app-footer">
-        <span>EMBRYOLAB <b>·</b> PORTAL VEIN DEVELOPMENT</span>
+        <span>EMBRYOLAB <b>·</b> HEPATIC VENOUS DEVELOPMENT</span>
         <span>Human development · Evidence-aware · Procedural reference geometry</span>
-        <span>Development build 0.5.0</span>
+        <span>Development build 0.6.0</span>
       </footer>
     </div>
   );

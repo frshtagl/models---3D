@@ -155,4 +155,4 @@ Open the Vite local URL printed in the terminal. For a production check:
 
 ## 13. Next milestone
 
-Milestone 6 will add hepatic outflow / terminal hepatic veins and the venous duct as a separately sourced umbilical-system shunt. The composite IVC will be built segment by segment and must not be represented as a single vessel of one embryonic origin.
+Milestone 6 now adds the classical hepatic efferent route, human terminal hepatic-vein collectors and two source-specific ductus-venosus pathways. Milestone 7 should add the complete paired umbilical-vein system and the cardinal venous networks needed to construct the composite IVC segment by segment.

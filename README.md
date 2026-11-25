@@ -5,11 +5,11 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 ## Current status
 
 - **Development branch:** feature/vitelline-veins-3d
-- **Current milestone:** Milestone 5 — portal vein, portal sinus and browser teaching walkthrough
+- **Current milestone:** Milestone 6 — hepatic outflow, terminal hepatic veins and ductus venosus
 - **Application:** React + TypeScript + Vite + Three.js
-- **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, six profile-specific intervitelline connections, classical and human portal-trunk pathways, two portal-sinus mechanisms, simplified left umbilical inflow and first-order portal branches
-- **Verification:** independent portal-path / attachment audit passed; GitHub Actions TypeScript validation and production build passed; browser visual review pending
-- **Scientific profiles:** stage-aware classical 2008 synthesis and human 2017 reconstruction profiles
+- **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, classical and human portal pathways, six hepatic-outflow layers, ten new outflow paths, two ductus-venosus mechanisms, terminal hepatic-vein collectors and flow-direction arrows
+- **Verification:** source graph validation added; GitHub Actions verification pending; browser visual review pending
+- **Scientific profiles:** classical 2008 synthesis and human 2017 reconstruction, supplemented by 2024 CS15 venous-route morphology
 
 ## Run locally
 
@@ -44,6 +44,8 @@ Production verification:
 - Run the nine-step in-browser portal-vein teaching walkthrough and use full-screen mode for classroom projection.
 - Inspect four classical intervitelline connections or the two human-reconstruction connections without overlaying incompatible models.
 - Inspect nine portal-system layers with 19 editable paths and separate classical / human portal-sinus mechanisms.
+- Inspect six hepatic-outflow layers with ten editable paths, flow arrows, two distinct ductus-venosus routes and three terminal hepatic-vein collectors.
+- Use the 14-step guided teaching walkthrough to compare portal inflow, hepatic efferent drainage, the venous duct and the hepatic IVC contribution.
 - Inspect the human dorsal connection relative to the dorsal pancreatic bud and the transient CS14 ventral connection.
 - Navigate dorsal / posterior and ventral / anterior anastomoses relative to the duodenum.
 - Follow the paired yolk-sac roots, extrahepatic trunks, intrahepatic conduits and hepatocardiac channels.
@@ -78,6 +80,10 @@ They must not be blended into one invented developmental sequence. Each profile 
 15. [Milestone 4 report](docs/milestones/MILESTONE_4_REPORT.md)
 16. [Intervitelline anastomosis anatomy guide](docs/anatomy/vitelline-veins/INTERVITELLINE_ANASTOMOSES.md)
 17. [Intervitelline graph architecture](docs/architecture/INTERVITELLINE_GRAPH.md)
+22. [Hepatic outflow and venous duct anatomy](docs/anatomy/vitelline-veins/HEPATIC_OUTFLOW_AND_VENOUS_DUCT.md)
+23. [Hepatic outflow graph architecture](docs/architecture/HEPATIC_OUTFLOW_GRAPH.md)
+24. [Milestone 6 report](docs/milestones/MILESTONE_6_REPORT.md)
+25. [Hepatic outflow browser teaching guide](docs/teaching/HEPATIC_OUTFLOW_BROWSER_TEACHING_GUIDE.md)
 18. [Portal vein development guide](docs/anatomy/vitelline-veins/PORTAL_VEIN_DEVELOPMENT.md)
 19. [Portal vascular graph architecture](docs/architecture/PORTAL_VASCULAR_GRAPH.md)
 20. [Milestone 5 report](docs/milestones/MILESTONE_5_REPORT.md)
@@ -91,6 +97,7 @@ They must not be blended into one invented developmental sequence. Each profile 
 - Milestone 3: hepatic sinusoidal plexus and intrahepatic venous pathways — implemented; TypeScript and production build passed; browser visual review pending.
 - Milestone 4: model-specific intervitelline anastomoses — implemented; attachment audit, TypeScript validation and production build passed; browser visual review pending.
 - Milestone 5: portal trunk, portal sinus, first-order portal branches and browser teaching walkthrough — implemented; portal-path / attachment audit and GitHub Actions typecheck / production build passed; browser visual review pending.
+- Milestone 6: classical hepatic efferent route, human venous duct, classical ductus venosus, terminal hepatic veins and flow arrows — source implementation added; graph / CI / browser verification pending.
 - Milestone 6: hepatic outflow, venous duct and context-only fetal circulation.
 - Milestone 7: learning, exploration and assessment tools.
 - Milestone 8: scientific review, verification and release.

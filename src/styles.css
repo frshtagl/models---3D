@@ -211,12 +211,17 @@ button:disabled { cursor: not-allowed; opacity: 0.38; }
 .umbilical-dot { background: #b49de2; box-shadow: 0 0 8px rgba(180,157,226,.45); }
 .portal-sinus-dot { background: #eea66d; box-shadow: 0 0 8px rgba(238,166,109,.45); }
 .portal-branch-dot { background: #58b7d5; box-shadow: 0 0 8px rgba(88,183,213,.45); }
+.ductus-dot { background: #82c8ee; box-shadow: 0 0 8px rgba(130,200,238,.55); }
+.terminal-hepatic-dot { background: #e99b78; box-shadow: 0 0 8px rgba(233,155,120,.5); }
+.flow-arrow-dot { background: #dce8f3; box-shadow: 0 0 8px rgba(220,232,243,.45); }
 
 .left-vein-dot { background: #a58de4; box-shadow: 0 0 8px rgba(165,141,228,.45); }
 .vessel-state-card { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; padding: 10px; border: 1px solid rgba(113,183,223,.2); border-radius: 7px; background: rgba(80,145,183,.08); }
 .vessel-state-card strong { color: #cce8f7; font-size: 10px; font-weight: 650; }
 .vessel-state-card small { color: #86a7be; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
 .evidence-note { padding-top: 8px; border-top: 1px solid var(--line); color: #a4b7c7 !important; }
+.postnatal-fate-note { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; padding: 10px; border: 1px solid rgba(130,200,238,.2); border-radius: 7px; background: rgba(85,153,193,.08); color: #a8c6da; font-size: 9px; line-height: 1.55; }
+.postnatal-fate-note strong { color: #d5e9f6; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
 .source-meta { margin-top: 8px; color: #6f91a9; font-size: 8px; letter-spacing: .06em; line-height: 1.5; }
 .warning-dot { background: #e5a65b !important; box-shadow: 0 0 9px rgba(229,166,91,.4) !important; }
 .network-issues { margin: 8px 0 0; padding-left: 15px; color: #e3b16f; font-size: 9px; line-height: 1.5; }

@@ -238,7 +238,7 @@ const rightIntrahepatic: VesselSegment = {
 
 const rightHepatocardiac: VesselSegment = {
   id: 'vitelline-right-hepatocardiac',
-  name: 'Right hepatocardiac channel — vitelline connection',
+  name: 'Right hepatocardiac channel — hepatic IVC contribution',
   side: 'right',
   region: 'hepatocardiac',
   fromNode: 'node-right-hepatic-exit',
@@ -252,7 +252,7 @@ const rightHepatocardiac: VesselSegment = {
   ],
   radius: 0.095,
   color: RIGHT,
-  description: 'The hepatocardiac channel is a shared cranial venous outlet to the sinus venosus. This module shows its vitelline connection; the umbilical contribution is deferred to the umbilical module. The right-sided channel becomes dominant in the cited reconstructions.',
+  description: 'The right hepatocardiac channel is the cranial hepatic outflow to the venous pole and contributes to the hepatic / suprahepatic IVC. This module shows the vitelline-derived hepatic contribution only; it is not the complete composite IVC and does not yet include the subcardinal / caudal cardinal infrahepatic segments.',
   states: statesFor('right', 'hepatocardiac')
 };
 

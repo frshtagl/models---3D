@@ -111,10 +111,10 @@ export const PORTAL_TEACHING_STEPS: PortalTeachingStep[] = [
     stageId: 'cs14',
     profile: 'human-2017',
     camera: 'anterior',
-    selectedStructure: 'left-umbilical-vein',
+    selectedStructure: 'left-umbilical-inflow',
     visibleLayers: [
       ...CONTEXT,
-      'left-umbilical-vein',
+      'left-umbilical-inflow',
       'portal-gallbladder',
       'human-portal-trunk',
       'human-right-portal-branches'
@@ -132,7 +132,7 @@ export const PORTAL_TEACHING_STEPS: PortalTeachingStep[] = [
     selectedStructure: 'human-portal-sinus',
     visibleLayers: [
       ...CONTEXT,
-      'left-umbilical-vein',
+      'left-umbilical-inflow',
       'human-portal-trunk',
       'human-portal-sinus',
       'human-right-portal-branches',
@@ -153,7 +153,7 @@ export const PORTAL_TEACHING_STEPS: PortalTeachingStep[] = [
     selectedStructure: 'human-left-portal-branches',
     visibleLayers: [
       'liver',
-      'left-umbilical-vein',
+      'left-umbilical-inflow',
       'human-portal-sinus',
       'human-portal-trunk',
       'human-left-portal-branches',
@@ -179,7 +179,7 @@ export const PORTAL_TEACHING_STEPS: PortalTeachingStep[] = [
       'classical-middle-dorsal-anastomosis',
       'classical-portal-trunk',
       'classical-subhepatic-anastomosis',
-      'left-umbilical-vein'
+      'left-umbilical-inflow'
     ],
     learningPoint: 'The classical portal trunk is assembled from three retained vitelline components.',
     narration: 'From caudal to cranial, trace the left vitelline segment from the mesenteric-vein termination to the middle anastomosis, the middle retroduodenal anastomosis itself, and the right vitelline segment between the middle and subhepatic anastomoses. The gold overlay highlights these three components.',
@@ -194,7 +194,7 @@ export const PORTAL_TEACHING_STEPS: PortalTeachingStep[] = [
     selectedStructure: 'classical-portal-sinus',
     visibleLayers: [
       ...CONTEXT,
-      'left-umbilical-vein',
+      'left-umbilical-inflow',
       'classical-portal-trunk',
       'classical-portal-sinus',
       'classical-left-portal-branches',
@@ -206,4 +206,102 @@ export const PORTAL_TEACHING_STEPS: PortalTeachingStep[] = [
     narration: 'The classical account describes regression of the left half of the subhepatic anastomosis and enlargement of the remaining part into the portal sinus. Compare this with the previous human-reconstruction step: the two accounts describe different developmental mechanisms for the portal sinus.',
     askLearners: 'What is the key difference between the classical and human-reconstruction explanations of the portal sinus?'
   }
-];
+,
+  {
+    id: 'classical-hepatic-outflow',
+    title: 'Trace the classical hepatic efferent route',
+    stageId: 'cs14',
+    profile: 'classical-2008',
+    camera: 'posterior',
+    selectedStructure: 'classical-subdiaphragmatic-anastomosis',
+    visibleLayers: [
+      ...CONTEXT,
+      'hepatic-sinusoidal-plexus',
+      'classical-venae-revehentes',
+      'classical-subdiaphragmatic-anastomosis',
+      'classical-right-terminal-hepatic-outflow',
+      'classical-left-terminal-hepatic-outflow',
+      'vitelline-right-hepatocardiac',
+      'vitelline-left-hepatocardiac'
+    ],
+    learningPoint: 'The classical hepatic efferent route drains sinusoidal blood through venae revehentes to the subdiaphragmatic anastomosis and then toward the venous sinus.',
+    narration: 'Start in the sinusoidal plexus. Follow the two classical venae revehentes cranially to the subdiaphragmatic intervitelline bridge. From there, blood leaves through the terminal primitive vitelline channels toward the venous pole. The model keeps the early bilateral arrangement visible before showing the right-sided dominance in later bins.',
+    askLearners: 'Which channels carry blood away from the hepatic sinusoids in the classical account?'
+  },
+  {
+    id: 'human-terminal-hepatic-veins',
+    title: 'Identify the terminal hepatic veins',
+    stageId: 'cs15',
+    profile: 'human-2017',
+    camera: 'posterior',
+    selectedStructure: 'human-terminal-hepatic-veins',
+    visibleLayers: [
+      ...CONTEXT,
+      'hepatic-sinusoidal-plexus',
+      'human-right-hepatic-drainage',
+      'human-terminal-hepatic-veins',
+      'vitelline-right-hepatocardiac'
+    ],
+    learningPoint: 'The 2024 CS15 reconstruction identifies right, middle and left hepatic veins draining toward the IVC.',
+    narration: 'Select the three terminal hepatic-vein collectors. They drain the intrahepatic venous network toward the right hepatic outflow junction and then into the hepatic IVC contribution. These paths are simplified teaching centre-lines, not a specimen-derived adult hepatic-vein tree.',
+    askLearners: 'What is the direction of flow through the terminal hepatic veins: toward or away from the liver?'
+  },
+  {
+    id: 'human-venous-duct',
+    title: 'Follow the human venous duct',
+    stageId: 'cs15',
+    profile: 'human-2017',
+    camera: 'oblique',
+    selectedStructure: 'human-ductus-venosus',
+    visibleLayers: [
+      ...CONTEXT,
+      'left-umbilical-inflow',
+      'human-portal-sinus',
+      'human-ductus-venosus',
+      'vitelline-right-hepatocardiac'
+    ],
+    learningPoint: 'The human venous duct is a direct left umbilical-vein-to-right-hepatocardiac shunt, separate from the portal sinus.',
+    narration: 'Begin at the left umbilical-vein hilum and follow the curved venous duct to the right hepatocardiac channel. The narrow central segment is exaggerated slightly for visibility and reflects the regional narrowing described in the CS15 human venous-route reconstruction. The venous duct is branchless in this teaching model.',
+    askLearners: 'Which two vessels are joined by the venous duct in the human reconstruction?'
+  },
+  {
+    id: 'classical-ductus-venosus',
+    title: 'Compare the classical ductus venosus',
+    stageId: 'cs16',
+    profile: 'classical-2008',
+    camera: 'oblique',
+    selectedStructure: 'classical-ductus-venosus',
+    visibleLayers: [
+      ...CONTEXT,
+      'left-umbilical-inflow',
+      'classical-portal-sinus',
+      'classical-ductus-venosus',
+      'vitelline-right-hepatocardiac'
+    ],
+    learningPoint: 'The classical account places the ductus venosus between the left angle of the portal sinus and the IVC.',
+    narration: 'Trace the branchless channel from the left portal-sinus angle toward the IVC / hepatic outflow junction. Compare it with the previous human-reconstruction step: the named starting point and the described developmental mechanism are not identical.',
+    askLearners: 'Does the classical ductus venosus begin at the portal sinus or directly in the umbilical-vein lumen?'
+  },
+  {
+    id: 'fetal-hepatic-venous-route',
+    title: 'Trace the fetal hepatic venous route',
+    stageId: 'cs16',
+    profile: 'human-2017',
+    camera: 'anterior',
+    selectedStructure: 'human-ductus-venosus',
+    visibleLayers: [
+      ...CONTEXT,
+      'left-umbilical-inflow',
+      'human-portal-sinus',
+      'human-ductus-venosus',
+      'human-right-hepatic-drainage',
+      'human-terminal-hepatic-veins',
+      'vitelline-right-hepatocardiac',
+      'human-right-portal-branches',
+      'human-left-portal-branches',
+      'portal-gallbladder'
+    ],
+    learningPoint: 'The portal sinus, venous duct and hepatic veins are three different pathways with different destinations.',
+    narration: 'Trace the umbilical inflow to the hilum. One shunt, the portal sinus, joins the right vitelline portal pathway and distributes blood into the liver. A second shunt, the venous duct, reaches the right hepatocardiac channel and bypasses the sinusoidal bed. Blood leaving the sinusoids drains through hepatic veins into the hepatic IVC outflow. At birth, the umbilical vein becomes the ligamentum teres and the venous duct becomes the ligamentum venosum.',
+    askLearners: 'Can you distinguish the portal sinus shunt from the venous duct shunt and the hepatic venous outflow?'
+  }];
