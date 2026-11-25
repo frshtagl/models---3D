@@ -55,3 +55,7 @@ The current network is stage-aware through CS16. It does not yet include:
 - detailed cranial cardinal / brachiocephalic / SVC development.
 
 All centre-lines and radii are normalized schematic geometry. They are not specimen measurements.
+
+## Build verification
+
+At commit 7559821e325c639ef50e918287f079afc7501b64, the build-time validator passed with 8 cardinal layers, 19 paths, 77 unique graph nodes and 22 guided teaching steps. GitHub Actions TypeScript validation and Vite production build passed: https://github.com/frshtagl/models---3D/actions/runs/45698752351. Browser visual review remains pending.

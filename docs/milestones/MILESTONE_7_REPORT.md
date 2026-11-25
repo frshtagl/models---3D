@@ -1,6 +1,6 @@
 # Milestone 7 — Paired Umbilical Veins and Cardinal Venous Foundations
 
-**Status:** Source implementation added; TypeScript, graph validation and production build pending  
+**Status:** Implemented; TypeScript, graph validation and production build passed; browser visual review and specialist embryology review pending  
 **Version:** 0.7.0  
 **Branch:** feature/vitelline-veins-3d
 
@@ -106,6 +106,15 @@ The build-time graph validator is being extended to verify:
 - subcardinal plexus continuity with the caudal cardinal and longitudinal subcardinal channels;
 - the textbook supracardinal layer remaining hidden in the human 2015 model;
 - every selected structure and visible layer referenced by the 22-step teaching guide.
+
+GitHub Actions run: https://github.com/frshtagl/models---3D/actions/runs/45698752351
+
+The final run passed:
+- TypeScript validation.
+- Source graph and topology validation: 6 hepatic-outflow layers / 10 paths; 2 umbilical layers / 3 paths; 8 cardinal layers / 19 paths.
+- 22 guided teaching steps checked against the anatomy registry.
+- 77 unique graph nodes checked.
+- Vite production build.
 
 These source checks do not replace browser visual inspection or specialist embryology review.
 
