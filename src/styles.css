@@ -211,6 +211,9 @@ button:disabled { cursor: not-allowed; opacity: 0.38; }
 .umbilical-dot { background: #b49de2; box-shadow: 0 0 8px rgba(180,157,226,.45); }
 .portal-sinus-dot { background: #eea66d; box-shadow: 0 0 8px rgba(238,166,109,.45); }
 .portal-branch-dot { background: #58b7d5; box-shadow: 0 0 8px rgba(88,183,213,.45); }
+.right-umbilical-dot { background: #d5a85c; box-shadow: 0 0 8px rgba(213,168,92,.42); }
+.cardinal-dot { background: #c58a9b; box-shadow: 0 0 8px rgba(197,138,155,.42); }
+.subcardinal-dot { background: #76b9a6; box-shadow: 0 0 8px rgba(118,185,166,.42); }
 .ductus-dot { background: #82c8ee; box-shadow: 0 0 8px rgba(130,200,238,.55); }
 .terminal-hepatic-dot { background: #e99b78; box-shadow: 0 0 8px rgba(233,155,120,.5); }
 .flow-arrow-dot { background: #dce8f3; box-shadow: 0 0 8px rgba(220,232,243,.45); }

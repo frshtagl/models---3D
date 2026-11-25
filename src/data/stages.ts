@@ -39,7 +39,8 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
       'Separate hepatoblast cords from endothelial sinusoidal channels.',
       'The sinusoidal plexus is a schematic microvascular network, not a measured capillary reconstruction.',
       'Keep the classical and human-reconstruction explanations of sinusoidal origin distinct.',
-      'The classical middle dorsal intervitelline connection is described as the first prehepatic anastomosis to appear (3.5–4 mm embryo); its CS12 display is an approximate teaching bin.'
+      'The classical middle dorsal intervitelline connection is described as the first prehepatic anastomosis to appear (3.5–4 mm embryo); its CS12 display is an approximate teaching bin.',
+      'The paired anterior, common and caudal cardinal channels form the early systemic venous return; the common cardinal veins enter the sinus venosus.'
     ],
     liverScale: 0.66,
     duodenumScale: 0.82
@@ -87,9 +88,10 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     events: [
       'Right portal branches are shown emerging from the right intrahepatic vitelline conduit; left portal branches are shown from the left umbilical vein.',
       'Left portal branches are not vitelline-derived in the 2017 reconstruction; they arise from the left umbilical vein.',
-      'The portal sinus is modeled as a separate intrahepatic shunt; the venous duct remains deferred to a later hepatic-outflow milestone.',
+      'The portal sinus is modeled as a separate intrahepatic shunt; the venous duct is shown as a distinct left umbilical-to-right hepatocardiac shunt.',
       'The human dorsal anastomosis is not separately resolved after early CS14 in the cited description; this model does not infer that it regressed.',
       'The 2024 CS15 reconstruction identifies right, middle and left hepatic veins draining into the IVC; the model uses simplified collector paths, not specimen-derived branching.',
+      'In the 2015 human cardinal reconstruction, the caudal cardinal extension is nearly complete and a subcardinal plexus begins developing in and around the mesonephroi.',
       'The venous duct is shown with a narrowed waist as a teaching approximation of the regional narrowing described at CS15.'
     ],
     liverScale: 1.08,
@@ -108,7 +110,8 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
       'Keep source-specific sinusoidal and portal lineage notes visible.',
       'Trace the venous duct as a branchless fetal shunt; after birth it closes to the ligamentum venosum.',
       'The left umbilical vein closes after birth to form the ligamentum teres; it is not the same remnant as the ductus venosus.',
-      'The hepatic IVC contribution is vitelline / hepatocardiac in origin; do not label the whole IVC as vitelline-derived.'
+      'The hepatic IVC contribution is vitelline / hepatocardiac in origin; do not label the whole IVC as vitelline-derived.',
+      'The 2015 human reconstruction describes longitudinal subcardinal channels and intersubcardinal anastomoses beginning at CS16; the final renal and infrarenal IVC are not complete in this stage bin.'
     ],
     liverScale: 1.16,
     duodenumScale: 1.04

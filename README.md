@@ -5,10 +5,10 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 ## Current status
 
 - **Development branch:** feature/vitelline-veins-3d
-- **Current milestone:** Milestone 6 — hepatic outflow, terminal hepatic veins and ductus venosus
+- **Current milestone:** Milestone 7 — paired umbilical veins and cardinal venous foundations
 - **Application:** React + TypeScript + Vite + Three.js
-- **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, classical and human portal pathways, six hepatic-outflow layers, ten new outflow paths, two ductus-venosus mechanisms, terminal hepatic-vein collectors and flow-direction arrows
-- **Verification:** TypeScript validation, hepatic-outflow graph validation and production build passed in GitHub Actions; browser visual review pending
+- **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, classical and human portal pathways, six hepatic-outflow layers, paired umbilical-vein pathways, eight cardinal layers, subcardinal plexus and an explicit two-model IVC / azygos interpretation selector
+- **Verification:** Milestone 6 TypeScript, graph validation and production build passed; Milestone 7 validation and production build pending; browser visual review pending
 - **Scientific profiles:** classical 2008 synthesis and human 2017 reconstruction, supplemented by 2024 CS15 venous-route morphology
 
 ## Run locally
@@ -46,7 +46,10 @@ Production verification:
 - Inspect four classical intervitelline connections or the two human-reconstruction connections without overlaying incompatible models.
 - Inspect nine portal-system layers with 19 editable paths and separate classical / human portal-sinus mechanisms.
 - Inspect six hepatic-outflow layers with ten editable paths, flow arrows, two distinct ductus-venosus routes and three terminal hepatic-vein collectors.
-- Use the 14-step guided teaching walkthrough to compare portal inflow, hepatic efferent drainage, the venous duct and the hepatic IVC contribution.
+- Use the 22-step guided teaching walkthrough to compare portal inflow, hepatic efferent drainage, paired umbilical veins, cardinal drainage and two competing IVC interpretations.
+- Inspect the right umbilical vein as an early paired channel and compare its regression with the persistent left umbilical inflow.
+- Inspect anterior, common and caudal cardinal veins, the mesonephric subcardinal plexus, longitudinal subcardinal channels and the early intersubcardinal connection.
+- Switch between the 2015 human caudal-cardinal reconstruction and the conventional supracardinal four-segment IVC teaching model.
 - Inspect the human dorsal connection relative to the dorsal pancreatic bud and the transient CS14 ventral connection.
 - Navigate dorsal / posterior and ventral / anterior anastomoses relative to the duodenum.
 - Follow the paired yolk-sac roots, extrahepatic trunks, intrahepatic conduits and hepatocardiac channels.
@@ -89,6 +92,10 @@ They must not be blended into one invented developmental sequence. Each profile 
 23. [Hepatic outflow graph architecture](docs/architecture/HEPATIC_OUTFLOW_GRAPH.md)
 24. [Milestone 6 report](docs/milestones/MILESTONE_6_REPORT.md)
 25. [Hepatic outflow browser teaching guide](docs/teaching/HEPATIC_OUTFLOW_BROWSER_TEACHING_GUIDE.md)
+26. [Umbilical and cardinal vein anatomy](docs/anatomy/vitelline-veins/UMBILICAL_AND_CARDINAL_VEINS.md)
+27. [Cardinal vascular graph architecture](docs/architecture/CARDINAL_VASCULAR_GRAPH.md)
+28. [Milestone 7 report](docs/milestones/MILESTONE_7_REPORT.md)
+29. [Umbilical and cardinal browser teaching guide](docs/teaching/UMBILICAL_CARDINAL_BROWSER_TEACHING_GUIDE.md)
 
 ## Planned development
 
@@ -99,9 +106,10 @@ They must not be blended into one invented developmental sequence. Each profile 
 - Milestone 4: model-specific intervitelline anastomoses — implemented; attachment audit, TypeScript validation and production build passed; browser visual review pending.
 - Milestone 5: portal trunk, portal sinus, first-order portal branches and browser teaching walkthrough — implemented; portal-path / attachment audit and GitHub Actions typecheck / production build passed; browser visual review pending.
 - Milestone 6: classical hepatic efferent route, human venous duct, classical ductus venosus, terminal hepatic veins and flow arrows — implemented; TypeScript, source-graph / teaching-step validation and production build passed; browser visual review pending.
-- Milestone 7: complete paired umbilical-vein system and cardinal venous pathways for the composite IVC.
-- Milestone 8: learning, exploration and assessment tools.
-- Milestone 9: scientific review, verification and release.
+- Milestone 7: paired umbilical veins, early cardinal drainage, subcardinal plexus, iliac confluence and alternative IVC / azygos interpretations — implemented; final CI validation pending.
+- Milestone 8: extend the timeline through CS18–CS23 and build the complete source-specific IVC, renal collar and azygos reconstructions.
+- Milestone 9: learning, exploration and assessment tools.
+- Milestone 10: scientific review, browser inspection, verification and release.
 
 ## Development principles
 

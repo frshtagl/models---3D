@@ -122,6 +122,54 @@ When sources differ:
 
 Do not claim that source hierarchy alone resolves all disagreement. Record the actual conflicting observations and explain the uncertainty.
 
+
+### 8. Isotani N, et al. (2024)
+
+**Title:** Regional differences in the umbilical vein and ductus venosus at different stages of normal human development.  
+**Journal:** The Anatomical Record. 2024;307(10):3306–3326.  
+**DOI:** https://doi.org/10.1002/ar.25421  
+**Publisher page:** https://anatomypubs.onlinelibrary.wiley.com/doi/10.1002/ar.25421
+
+**Use in this project:**
+- paired early umbilical and vitelline venous context;
+- right umbilical-vein regression and persistence of the left umbilical route;
+- regional morphology and narrowing of the ductus venosus;
+- CS15 reconstruction of the venous route and right, middle and left hepatic veins joining the IVC.
+
+**Limitation:** use the study for the venous-route reconstructions it actually reports; do not infer a complete placental or cardinal venous system from it.
+
+### 9. Hikspoors J P J M, et al. (2015)
+
+**Title:** Development of the human infrahepatic inferior caval and azygos venous systems.  
+**Journal:** Journal of Anatomy. 2015 Feb;226(2):113–125.  
+**DOI:** https://doi.org/10.1111/joa.12266  
+**PubMed:** https://pubmed.ncbi.nlm.nih.gov/25496171/  
+**PMCID:** PMC4304567  
+**Full text:** https://pmc.ncbi.nlm.nih.gov/articles/PMC4304567/
+
+**Use in this project:**
+- primary human embryo reconstructions from 4 to 10 weeks;
+- caudal cardinal extension from CS11 to CS15;
+- subcardinal plexus development in and around the mesonephroi from CS15;
+- longitudinal subcardinal channels and intersubcardinal anastomoses from CS16;
+- the authors' interpretation of the infrarenal IVC and azygos system as caudal-cardinal derivatives, with renal-region contribution from the subcardinal system;
+- explicit comparison with conventional supracardinal / sacrocardinal models.
+
+**Important limitation:** this is a source-specific human reconstruction that challenges conventional venous-system nomenclature. The app keeps it as an alternative interpretation instead of silently replacing the conventional teaching model.
+
+### 10. Imaging of inferior vena cava normal variants, anomalies and pathologies, Part 1: Congenital (2023)
+
+**Journal:** Insights into Imaging.  
+**Full text:** https://pmc.ncbi.nlm.nih.gov/articles/PMC10788309/
+
+**Use in this project:**
+- conventional four-segment IVC teaching model;
+- hepatic, suprarenal, renal and infrarenal segment mapping;
+- conventional right subcardinal, subcardinal–supracardinal and right supracardinal assignments;
+- azygos / hemiazygos system context.
+
+**Limitation:** this is a clinical imaging review, not a primary human embryonic reconstruction. It is used to document the conventional textbook interpretation, which is displayed separately from the 2015 human reconstruction.
+
 ## F. Citation implementation
 
 Every anatomy data record should cite one or more reference IDs:

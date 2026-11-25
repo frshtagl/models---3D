@@ -80,7 +80,7 @@ These are broad teaching bins. The 2024 study provides detailed later-stage spec
 
 ## 8. Teaching application
 
-The in-browser guided sequence now has 14 steps:
+The in-browser guided sequence introduced by Milestone 6 had 14 steps. Milestone 7 extends the complete app sequence to 22 steps:
 - the original nine portal-system steps;
 - classical hepatic efferent outflow;
 - human terminal hepatic veins;
@@ -135,4 +135,4 @@ These deterministic source checks do not replace visual inspection in a browser 
 
 ## 12. Next milestone
 
-Milestone 7 should add the complete paired umbilical-vein system and then the cardinal venous networks required to build the composite IVC segment by segment. The hepatic IVC contribution must remain a separate, explicitly labelled part of that later reconstruction.
+Milestone 7 now adds the early paired umbilical veins, cardinal drainage and subcardinal precursors. Milestone 8 should extend the timeline through CS18–CS23 and build the complete source-specific IVC, renal collar and azygos reconstructions. The hepatic IVC contribution must remain a separate, explicitly labelled part of that later reconstruction.

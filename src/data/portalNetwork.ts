@@ -55,6 +55,7 @@ export interface PortalVascularLayer {
   states: Record<EvidenceProfile, PortalStageStates>;
   evidence: Record<EvidenceProfile, string>;
   sourceIds: readonly string[];
+  postnatalFate?: string;
 }
 
 export interface PortalPresentation {
@@ -124,8 +125,8 @@ export const PORTAL_NODES: PortalNode[] = [
   {
     id: 'node-left-umbilical-root',
     label: 'Left umbilical vein — umbilical entry',
-    position: point(-1.35, -1.72, -0.62),
-    description: 'Caudal entry of the simplified left umbilical-vein teaching path. The complete paired umbilical system is not modeled in this milestone.'
+    position: point(-0.25, -2.35, -1.0),
+    description: 'Placental / connecting-stalk end of the persistent left umbilical vein. The paired right umbilical vein and early sinus-horn connections are represented in the separate umbilical module.'
   },
   {
     id: 'node-left-umbilical-hilum',
@@ -231,10 +232,11 @@ const portalLayer = (
   stageStates: Record<EvidenceProfile, PortalStageStates>,
   evidence: Record<EvidenceProfile, string>,
   sourceIds: readonly string[],
-  category: PortalVascularLayer['category'] = 'vessel'
+  category: PortalVascularLayer['category'] = 'vessel',
+  postnatalFate?: string
 ): PortalVascularLayer => ({
   id, name, shortName, category, description, status, color, radius,
-  profile, paths, states: stageStates, evidence, sourceIds
+  profile, paths, states: stageStates, evidence, sourceIds, postnatalFate
 });
 
 export const PORTAL_VASCULAR_LAYERS: PortalVascularLayer[] = [
@@ -325,8 +327,8 @@ export const PORTAL_VASCULAR_LAYERS: PortalVascularLayer[] = [
     'left-umbilical-vein',
     'Left umbilical vein — simplified portal inflow context',
     'Left umbilical vein',
-    'A simplified left umbilical-vein path from the umbilical entry to the hepatic hilum. It is included only to explain the portal sinus and left-sided portal branches; the paired umbilical veins and full placental circulation are outside this milestone.',
-    'Context vessel · limited umbilical module',
+    'A simplified persistent left umbilical-vein path from the placental entry to the hepatic hilum. The right umbilical vein and the early left sinus-horn connection are modeled separately in umbilicalNetwork.ts; this layer is reused by the paired-system lessons rather than duplicated.',
+    'Persistent left umbilical inflow · paired system',
     '#b49de2',
     0.078,
     'both',
@@ -336,11 +338,11 @@ export const PORTAL_VASCULAR_LAYERS: PortalVascularLayer[] = [
         fromNode: 'node-left-umbilical-root',
         toNode: 'node-left-umbilical-hilum',
         points: [
-          point(-1.35, -1.72, -0.62),
-          point(-1.2, -1.25, -0.56),
-          point(-1.05, -0.72, -0.48),
-          point(-0.9, -0.15, -0.42),
-          point(-0.78, 0.55, -0.36),
+          point(-0.25, -2.35, -1.0),
+          point(-0.3, -1.8, -0.9),
+          point(-0.42, -1.2, -0.78),
+          point(-0.55, -0.55, -0.62),
+          point(-0.68, 0.15, -0.44),
           point(-0.72, 1.22, -0.28)
         ]
       }
@@ -353,7 +355,9 @@ export const PORTAL_VASCULAR_LAYERS: PortalVascularLayer[] = [
       'classical-2008': 'The 2008 synthesis describes the left umbilical vein enlarging, continuing through the liver, and connecting with the left angle of the subhepatic intervitelline anastomosis. The path here is simplified and is not a full reconstruction of both umbilical veins.',
       'human-2017': 'Hikspoors et al. describe the left umbilical vein as the dominant umbilical inflow. At early CS14 it forms intrahepatic connections with the vitelline conduits; the portal sinus and venous duct are distinct left-to-right shunts.'
     },
-    ['CF2008', 'HIKSPOORS2017']
+    ['CF2008', 'HIKSPOORS2017'],
+    'context',
+    'After birth, the persistent left umbilical vein closes and forms the ligamentum teres hepatis (round ligament of the liver).'
   ),
   portalLayer(
     'classical-portal-sinus',

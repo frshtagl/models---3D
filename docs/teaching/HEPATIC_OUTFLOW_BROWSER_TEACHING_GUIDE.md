@@ -1,6 +1,6 @@
 # Hepatic Outflow and Venous Duct — Browser Teaching Guide
 
-This guide covers the full 14-step in-browser teaching sequence: the first nine steps teach the portal system, and the final five teach hepatic outflow and the venous duct.
+This guide covers the original 14 portal / hepatic-outflow lessons. The complete app now continues with eight paired umbilical and cardinal lessons; see the [Umbilical and Cardinal Browser Teaching Guide](UMBILICAL_CARDINAL_BROWSER_TEACHING_GUIDE.md).
 
 ## 1. Launch the browser workstation
 

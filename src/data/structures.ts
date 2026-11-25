@@ -2,6 +2,8 @@ import { HEPATIC_VASCULAR_LAYERS } from './hepaticVascularNetwork';
 import { HEPATIC_OUTFLOW_LAYERS } from './hepaticOutflowNetwork';
 import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_LANDMARKS } from './intervitellineNetwork';
 import { PORTAL_LANDMARKS, PORTAL_VASCULAR_LAYERS } from './portalNetwork';
+import { UMBILICAL_VASCULAR_LAYERS } from './umbilicalNetwork';
+import { CARDINAL_VASCULAR_LAYERS } from './cardinalNetwork';
 
 export interface AnatomicalStructure {
   id: string;
@@ -34,6 +36,13 @@ export const ANATOMICAL_STRUCTURES: AnatomicalStructure[] = [
   ...INTERVITELLINE_LANDMARKS.map((item) => ({ id: item.id, name: item.name, shortName: item.name, category: 'landmark' as const, description: item.description, status: 'Stage-specific anatomical landmark', color: '#d9a46e' })),
   ...PORTAL_VASCULAR_LAYERS.map((layer) => ({ id: layer.id, name: layer.name, shortName: layer.shortName, category: layer.category, description: layer.description, status: layer.status, color: layer.color })),
   ...PORTAL_LANDMARKS.map((item) => ({ id: item.id, name: item.name, shortName: item.shortName, category: item.category, description: item.description, status: 'Portal-system orientation landmark', color: item.color })),
+  ...UMBILICAL_VASCULAR_LAYERS.map((layer) => ({ id: layer.id, name: layer.name, shortName: layer.shortName, category: 'vessel' as const, description: layer.description, status: layer.status, color: layer.color })),
+  ...CARDINAL_VASCULAR_LAYERS.map((layer) => ({ id: layer.id, name: layer.name, shortName: layer.shortName, category: 'vessel' as const, description: layer.description, status: layer.status, color: layer.color })),
+  { id: 'placenta', name: 'Placental / chorionic reference', shortName: 'Placenta', category: 'context', description: 'A flattened schematic reference for the extraembryonic placental end of the paired umbilical veins. It is not a placental villous or fetal-maternal circulation reconstruction.', status: 'Extraembryonic context', color: '#9e657e' },
+  { id: 'umbilical-cord', name: 'Umbilical cord / connecting stalk reference', shortName: 'Umbilical cord', category: 'context', description: 'A simplified connecting-stalk / umbilical-cord reference to orient the paired umbilical venous roots. It is not a full cord or umbilical arterial model.', status: 'Extraembryonic context', color: '#b18a67' },
+  { id: 'dorsal-aorta', name: 'Dorsal aorta — positional landmark', shortName: 'Dorsal aorta', category: 'landmark', description: 'A central arterial reference used to explain the ventromedial position of the subcardinal channels and the relationship of the renal venous cross-connection to the aorta. It is not an aortic-development model.', status: 'Cardinal-system orientation landmark', color: '#c96c72' },
+  { id: 'mesonephros-right', name: 'Right mesonephros', shortName: 'Right mesonephros', category: 'organ', description: 'A schematic urogenital-ridge landmark. The developing subcardinal plexus is shown in and around the mesonephroi.', status: 'Cardinal-system context', color: '#8e7b91' },
+  { id: 'mesonephros-left', name: 'Left mesonephros', shortName: 'Left mesonephros', category: 'organ', description: 'A schematic urogenital-ridge landmark. The developing subcardinal plexus is shown in and around the mesonephroi.', status: 'Cardinal-system context', color: '#8e7b91' },
   { id: 'orientation-axes', name: 'Anatomical orientation axes', shortName: 'Orientation axes', category: 'landmark', description: 'Coordinate convention: +X embryonic right, +Y cranial, +Z dorsal. The anterior view is from the ventral side.', status: 'Navigation aid', color: '#9aa9bc' }
 ];
 

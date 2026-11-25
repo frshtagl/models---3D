@@ -80,6 +80,6 @@ Run the independent source audit with `npm run validate:graph`. The production b
 - the narrowed venous-duct path remains distinct;
 - the human terminal hepatic-vein layer contains exactly three collectors.
 
-The build-time validator also checks all 14 guided lesson steps against the anatomy registry. At commit 5efc8eb2b8e71a4669e81d4b98d8778600ec00eb, it passed with 6 layers, 10 paths, 58 source graph nodes and 7 flow arrows. GitHub Actions TypeScript validation and production build passed: https://github.com/frshtagl/models---3D/actions/runs/45677428811.
+The build-time validator checked the original 14 hepatic / portal lessons against the anatomy registry; Milestone 7 extends this to 22 guided steps across the full app. At commit 5efc8eb2b8e71a4669e81d4b98d8778600ec00eb, it passed with 6 layers, 10 paths, 58 source graph nodes and 7 flow arrows. GitHub Actions TypeScript validation and production build passed: https://github.com/frshtagl/models---3D/actions/runs/45677428811.
 
 These are source-coordinate checks. They do not replace visual review of the rendered scene or specialist anatomical review.

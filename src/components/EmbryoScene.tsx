@@ -10,12 +10,16 @@ import { HEPATIC_VASCULAR_LAYERS, getHepaticLayerPresentation } from '../data/he
 import { HEPATIC_OUTFLOW_LAYERS, getHepaticOutflowPresentation } from '../data/hepaticOutflowNetwork';
 import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_LANDMARKS, getIntervitellinePresentation } from '../data/intervitellineNetwork';
 import { PORTAL_LANDMARKS, PORTAL_VASCULAR_LAYERS, getPortalLayerPresentation } from '../data/portalNetwork';
+import { UMBILICAL_VASCULAR_LAYERS, getUmbilicalLayerPresentation } from '../data/umbilicalNetwork';
+import { CARDINAL_VASCULAR_LAYERS, getCardinalLayerPresentation } from '../data/cardinalNetwork';
+import type { CardinalModel } from '../data/cardinalNetwork';
 
 export type CameraPreset = 'anterior' | 'posterior' | 'right' | 'left' | 'superior' | 'inferior' | 'oblique' | 'reset';
 
 interface Props {
   stage: DevelopmentStage;
   profile: EvidenceProfile;
+  cardinalModel: CardinalModel;
   visibleLayers: StructureVisibility;
   selectedStructure: string | null;
   cameraPreset: CameraPreset;
@@ -190,7 +194,7 @@ function clearGroup(group: THREE.Group) {
 }
 
 export default function EmbryoScene({
-  stage, profile, visibleLayers, selectedStructure, cameraPreset, onSelectStructure
+  stage, profile, cardinalModel, visibleLayers, selectedStructure, cameraPreset, onSelectStructure
 }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<SceneApi | null>(null);
@@ -272,6 +276,57 @@ export default function EmbryoScene({
     yolk.position.set(0, -2.18, -0.34);
     add('yolk-sac', yolk);
 
+    const placenta = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 36, 24),
+      new THREE.MeshStandardMaterial({ color: '#9e657e', roughness: 0.7, transparent: true, opacity: 0.58, depthWrite: false })
+    );
+    placenta.scale.set(1.18, 0.34, 0.22);
+    placenta.position.set(0, -2.62, -0.9);
+    add('placenta', placenta);
+
+    const umbilicalCord = new THREE.Group();
+    umbilicalCord.add(tube([
+      new THREE.Vector3(0, -2.58, -0.9),
+      new THREE.Vector3(0, -2.46, -0.94),
+      new THREE.Vector3(0, -2.35, -1.0)
+    ], 0.13, '#b18a67'));
+    umbilicalCord.add(tube([
+      new THREE.Vector3(0, -2.35, -1.0),
+      new THREE.Vector3(-0.13, -2.35, -1.0),
+      new THREE.Vector3(-0.25, -2.35, -1.0)
+    ], 0.075, '#b18a67'));
+    umbilicalCord.add(tube([
+      new THREE.Vector3(0, -2.35, -1.0),
+      new THREE.Vector3(0.13, -2.35, -1.0),
+      new THREE.Vector3(0.25, -2.35, -1.0)
+    ], 0.075, '#b18a67'));
+    umbilicalCord.traverse((object) => {
+      if (object instanceof THREE.Mesh) object.userData.structureId = 'umbilical-cord';
+    });
+    add('umbilical-cord', umbilicalCord);
+
+    add('dorsal-aorta', tube([
+      new THREE.Vector3(0, -2.05, 0.62),
+      new THREE.Vector3(0, -1.35, 0.62),
+      new THREE.Vector3(0, -0.55, 0.62),
+      new THREE.Vector3(0, 0.25, 0.62),
+      new THREE.Vector3(0, 1.1, 0.62),
+      new THREE.Vector3(0, 1.95, 0.62),
+      new THREE.Vector3(0.08, 2.55, 0.52)
+    ], 0.085, '#c96c72'));
+
+    const makeMesonephros = (side: 'left' | 'right') => {
+      const organ = new THREE.Mesh(
+        new THREE.SphereGeometry(0.42, 32, 24),
+        new THREE.MeshStandardMaterial({ color: '#8e7b91', roughness: 0.66, transparent: true, opacity: 0.55, depthWrite: false })
+      );
+      organ.scale.set(0.72, 1.62, 0.64);
+      organ.position.set(side === 'right' ? 0.76 : -0.76, -0.86, 0.48);
+      return organ;
+    };
+    add('mesonephros-right', makeMesonephros('right'));
+    add('mesonephros-left', makeMesonephros('left'));
+
     const sinus = new THREE.Mesh(
       new THREE.SphereGeometry(0.43, 36, 24),
       new THREE.MeshStandardMaterial({ color: '#5689b8', roughness: 0.4 })
@@ -308,6 +363,12 @@ export default function EmbryoScene({
       add(item.id, new THREE.Group());
     });
     PORTAL_VASCULAR_LAYERS.forEach((layer) => {
+      add(layer.id, new THREE.Group());
+    });
+    UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
+      add(layer.id, new THREE.Group());
+    });
+    CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
       add(layer.id, new THREE.Group());
     });
 
@@ -386,7 +447,9 @@ export default function EmbryoScene({
       ...HEPATIC_VASCULAR_LAYERS.map((layer) => layer.id),
       ...HEPATIC_OUTFLOW_LAYERS.map((layer) => layer.id),
       ...INTERVITELLINE_ANASTOMOSES.map((item) => item.id),
-      ...PORTAL_VASCULAR_LAYERS.map((layer) => layer.id)
+      ...PORTAL_VASCULAR_LAYERS.map((layer) => layer.id),
+      ...UMBILICAL_VASCULAR_LAYERS.map((layer) => layer.id),
+      ...CARDINAL_VASCULAR_LAYERS.map((layer) => layer.id)
     ]);
     api.objects.forEach((object, id) => {
       if (!vesselIds.has(id)) object.visible = visibleLayers[id] ?? true;
@@ -539,6 +602,86 @@ export default function EmbryoScene({
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
+    const stageId = stage.id as VitellineStageId;
+    UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
+      const group = api.objects.get(layer.id) as THREE.Group | undefined;
+      if (!group) return;
+      clearGroup(group);
+      const presentation = getUmbilicalLayerPresentation(layer, profile, stageId);
+      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.userData.vesselState = presentation.state;
+      group.userData.statusLabel = presentation.statusLabel;
+      layer.paths.forEach((pathItem) => {
+        const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        if (mesh) {
+          mesh.userData.structureId = layer.id;
+          mesh.userData.pathId = pathItem.id;
+          group.add(mesh);
+        }
+        if (pathItem.flowArrow) {
+          const arrow = makeFlowArrow(pathItem.points, layer.color, radius);
+          if (arrow) {
+            arrow.userData.structureId = layer.id;
+            arrow.userData.pathId = pathItem.id;
+            group.add(arrow);
+          }
+        }
+      });
+      highlight(group, layer.id === selectedStructure);
+    });
+  }, [stage, profile, visibleLayers, selectedStructure]);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    const stageId = stage.id as VitellineStageId;
+    CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
+      const group = api.objects.get(layer.id) as THREE.Group | undefined;
+      if (!group) return;
+      clearGroup(group);
+      const presentation = getCardinalLayerPresentation(layer, cardinalModel, stageId);
+      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.userData.vesselState = presentation.state;
+      group.userData.statusLabel = presentation.statusLabel;
+      layer.paths.forEach((pathItem) => {
+        const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        if (mesh) {
+          mesh.userData.structureId = layer.id;
+          mesh.userData.pathId = pathItem.id;
+          group.add(mesh);
+        }
+        if (pathItem.flowArrow) {
+          const arrow = makeFlowArrow(pathItem.points, layer.color, radius);
+          if (arrow) {
+            arrow.userData.structureId = layer.id;
+            arrow.userData.pathId = pathItem.id;
+            group.add(arrow);
+          }
+        }
+      });
+      highlight(group, layer.id === selectedStructure);
+    });
+  }, [stage, cardinalModel, visibleLayers, selectedStructure]);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    const stageId = stage.id as VitellineStageId;
+    UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
+      const group = api.objects.get(layer.id);
+      if (group) group.visible = (visibleLayers[layer.id] ?? true) && getUmbilicalLayerPresentation(layer, profile, stageId).visible;
+    });
+    CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
+      const group = api.objects.get(layer.id);
+      if (group) group.visible = (visibleLayers[layer.id] ?? true) && getCardinalLayerPresentation(layer, cardinalModel, stageId).visible;
+    });
+    const mesonephrosVisible = ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
+    for (const id of ['mesonephros-right', 'mesonephros-left']) {
+      const object = api.objects.get(id);
+      if (object) object.visible = (visibleLayers[id] ?? true) && mesonephrosVisible;
+    }
     api.objects.get('liver')?.scale.setScalar(stage.liverScale);
     api.objects.get('duodenum')?.scale.setScalar(stage.duodenumScale);
     const pancreas = api.objects.get('dorsal-pancreatic-bud');
