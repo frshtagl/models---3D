@@ -211,7 +211,7 @@ const rightIntrahepatic: VesselSegment = {
   fromNode: 'node-right-hepatic-entry',
   toNode: 'node-right-hepatic-exit',
   points: [
-    point(0.92, 0.38, 0.3),
+    point(0.92, 0.95, 0.3),
     point(0.98, 1.2, 0.36),
     point(0.82, 1.48, 0.4),
     point(0.58, 1.78, 0.34),
@@ -289,7 +289,7 @@ const leftIntrahepatic: VesselSegment = {
   fromNode: 'node-left-hepatic-entry',
   toNode: 'node-left-hepatic-exit',
   points: [
-    point(-0.92, 0.38, 0.3),
+    point(-0.92, 0.95, 0.3),
     point(-0.98, 1.2, 0.36),
     point(-0.82, 1.48, 0.4),
     point(-0.58, 1.78, 0.34),

@@ -8,7 +8,7 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 - **Current milestone:** Milestone 2 — paired vitelline veins and yolk-sac drainage
 - **Application:** React + TypeScript + Vite + Three.js
 - **Anatomy status:** paired vitelline channels implemented as schematic, independently selectable vessel segments
-- **Scientific profiles:** classical 2008 synthesis and human 2017 reconstruction are selectable scaffolds
+- **Scientific profiles:** stage-aware classical 2008 synthesis and human 2017 reconstruction profiles
 
 ## Run locally
 
@@ -38,7 +38,7 @@ Production verification:
 - Follow the paired yolk-sac roots, extrahepatic trunks, intrahepatic conduits and hepatocardiac channels.
 - Inspect the stage-dependent right-sided dominance and the profile-specific left-sided remodeling.
 
-The present geometry is a schematic orientation blockout, not a measured embryo reconstruction. Stage-dependent organ scaling is illustrative and is not intended to represent exact growth measurements.
+All current organ and vessel geometry is normalized schematic geometry, not a measured embryo reconstruction. Stage-dependent organ scaling and vessel radii are visual teaching parameters, not exact growth or diameter measurements.
 
 ## Scientific policy
 
@@ -66,7 +66,7 @@ They must not be blended into one invented developmental sequence. Each profile 
 
 - Milestone 0: scientific specification, fate map, source register, coordinate contract and architecture.
 - Milestone 1: browser application shell and navigatable 3D anatomical blockout.
-- Milestone 2: paired vitelline veins and yolk-sac drainage.
+- Milestone 2: paired vitelline veins and yolk-sac drainage — implemented; build and browser verification pending.
 - Milestone 3: hepatic interaction and sinusoidal pathways.
 - Milestone 4: model-specific intervitelline anastomoses.
 - Milestone 5: regression, portal vein and lineage tracing.

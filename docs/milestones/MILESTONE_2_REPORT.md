@@ -1,6 +1,6 @@
 # Milestone 2 — Paired Vitelline Veins and Yolk-Sac Drainage
 
-**Status:** Source implementation committed; TypeScript / CI / browser verification pending  
+**Status:** Source implementation committed; graph-data validation passed; TypeScript / CI / browser verification pending  
 **Date:** 25 November 2026  
 **Branch:** feature/vitelline-veins-3d
 
@@ -88,8 +88,9 @@ The UI reports the current graph-validation result. This data-level check does n
 
 | Check | Status |
 |---|---|
-| 8 segment definitions committed | Implemented |
-| 10 named endpoint nodes committed | Implemented |
+| 8 segment definitions committed | Passed |
+| 10 named endpoint nodes committed | Passed |
+| Segment endpoint and right / left chain validation | Passed — 0 graph issues |
 | Two separate source profiles | Implemented |
 | Stage-specific vessel state | Implemented |
 | Click-to-select vessel meshes | Implemented; browser check pending |
