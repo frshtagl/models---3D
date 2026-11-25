@@ -1,13 +1,49 @@
 # Interactive Embryonic Venous Development Laboratory
 
-A version-controlled, interactive 3D embryology project. The first module is the **vitelline veins**, designed as the foundation for later umbilical-vein and cardinal-vein modules.
+An evidence-aware, version-controlled 3D embryology workstation. The first learning module focuses on the vitelline veins and establishes a reusable foundation for later umbilical-vein and cardinal-vein modules.
 
-## Project status
+## Current status
 
-**Current milestone:** Milestone 0 — scientific specification and architecture baseline  
-**Application status:** 3D application not yet implemented  
-**Active development branch:** feature/vitelline-veins-3d  
-**Stable branch:** main
+- **Development branch:** feature/vitelline-veins-3d
+- **Current milestone:** Milestone 1 — interactive 3D foundation
+- **Application:** React + TypeScript + Vite + Three.js
+- **Anatomy status:** reference-organ blockout only; detailed vitelline vessels are not implemented yet
+- **Scientific profiles:** classical 2008 synthesis and human 2017 reconstruction are selectable scaffolds
+
+## Run locally
+
+Requirements: Node.js 20 or later.
+
+    npm install
+    npm run dev
+
+Open the local Vite address printed in the terminal.
+
+Production verification:
+
+    npm run typecheck
+    npm run build
+    npm run preview
+
+## Current interactions
+
+- Orbit, pan and zoom the 3D scene.
+- Switch between anterior, posterior, right, left, superior and inferior camera views.
+- Navigate Carnegie stages CS10, CS12, CS13, CS14, CS15 and CS16.
+- Play the stage sequence.
+- Select structures from the scene or anatomy layer list.
+- Toggle layer visibility or isolate the selected structure.
+- Switch the scientific evidence profile.
+
+The present geometry is a schematic orientation blockout, not a measured embryo reconstruction. Stage-dependent organ scaling is illustrative and is not intended to represent exact growth measurements.
+
+## Scientific policy
+
+The project preserves two distinct published approaches:
+- the classical vestigial / anastomotic model summarized by Collardeau-Frachon and Scoazec (2008);
+- the human 3D reconstruction / lineage and hemodynamic model reported by Hikspoors and colleagues (2017).
+
+They must not be blended into one invented developmental sequence. Each profile will receive its own stage-specific vessel graph and citations.
 
 ## Start here
 
@@ -19,18 +55,11 @@ A version-controlled, interactive 3D embryology project. The first module is the
 6. [3D coordinate system](docs/architecture/COORDINATE_SYSTEM.md)
 7. [Project architecture](docs/architecture/PROJECT_ARCHITECTURE.md)
 8. [Milestone 0 report](docs/milestones/MILESTONE_0_REPORT.md)
+9. [Milestone 1 report](docs/milestones/MILESTONE_1_REPORT.md)
 
-## Scientific policy
+## Planned development
 
-The project preserves two distinct published approaches:
-- the classical vestigial / anastomotic model summarized by Collardeau-Frachon and Scoazec (2008);
-- the human 3D reconstruction / lineage and hemodynamic model reported by Hikspoors and colleagues (2017).
-
-They must not be blended into a single invented sequence. Each model has its own stage-specific vessel graph and citations.
-
-## Planned implementation
-
-- Milestone 0: scientific specification, fate map, source register, coordinate contract, architecture.
+- Milestone 0: scientific specification, fate map, source register, coordinate contract and architecture.
 - Milestone 1: browser application shell and navigatable 3D anatomical blockout.
 - Milestone 2: paired vitelline veins and yolk-sac drainage.
 - Milestone 3: hepatic interaction and sinusoidal pathways.
@@ -38,7 +67,7 @@ They must not be blended into a single invented sequence. Each model has its own
 - Milestone 5: regression, portal vein and lineage tracing.
 - Milestone 6: hepatic outflow and context-only fetal circulation.
 - Milestone 7: learning, exploration and assessment tools.
-- Milestone 8: verification and release.
+- Milestone 8: scientific review, verification and release.
 
 ## Development principles
 
@@ -49,6 +78,6 @@ They must not be blended into a single invented sequence. Each model has its own
 - Atomic commits and verified milestones.
 - No claim of completion without actual browser and test verification.
 
-## Repository visibility
+## Repository safety
 
 This repository is currently public. Do not commit private information, copyrighted textbook scans, unlicensed models, credentials or other sensitive material.

@@ -181,8 +181,9 @@ export default function EmbryoScene({
 
     const grid = new THREE.GridHelper(12, 24, '#244057', '#172b3d');
     grid.position.y = -3.1;
-    grid.material.transparent = true;
-    grid.material.opacity = 0.2;
+    const gridMaterial = grid.material as THREE.Material;
+    gridMaterial.transparent = true;
+    gridMaterial.opacity = 0.2;
     scene.add(grid);
 
     apiRef.current = { camera, controls, objects };
