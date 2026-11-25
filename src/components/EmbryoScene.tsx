@@ -6,6 +6,7 @@ import type { StructureVisibility } from '../data/structures';
 import type { EvidenceProfile } from '../data/stages';
 import { VITELLINE_SEGMENTS, getVesselPresentation } from '../data/vitellineNetwork';
 import type { Point3, VitellineStageId } from '../data/vitellineNetwork';
+import { HEPATIC_VASCULAR_LAYERS, getHepaticLayerPresentation } from '../data/hepaticVascularNetwork';
 
 export type CameraPreset = 'anterior' | 'posterior' | 'right' | 'left' | 'superior' | 'inferior' | 'oblique' | 'reset';
 
@@ -230,6 +231,9 @@ export default function EmbryoScene({
     VITELLINE_SEGMENTS.forEach((segment) => {
       add(segment.id, new THREE.Group());
     });
+    HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
+      add(layer.id, new THREE.Group());
+    });
 
     const grid = new THREE.GridHelper(12, 24, '#244057', '#172b3d');
     grid.position.y = -3.1;
@@ -259,7 +263,14 @@ export default function EmbryoScene({
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
       const hit = raycaster.intersectObjects(Array.from(objects.values()), true)
-        .find((entry) => typeof entry.object.userData.structureId === 'string');
+        .find((entry) => {
+          let current: THREE.Object3D | null = entry.object;
+          while (current) {
+            if (!current.visible) return false;
+            current = current.parent;
+          }
+          return typeof entry.object.userData.structureId === 'string';
+        });
       if (hit) selectRef.current(hit.object.userData.structureId as string);
     };
     renderer.domElement.addEventListener('pointerdown', pointerDown);
@@ -294,7 +305,10 @@ export default function EmbryoScene({
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
-    const vesselIds = new Set(VITELLINE_SEGMENTS.map((segment) => segment.id));
+    const vesselIds = new Set([
+      ...VITELLINE_SEGMENTS.map((segment) => segment.id),
+      ...HEPATIC_VASCULAR_LAYERS.map((layer) => layer.id)
+    ]);
     api.objects.forEach((object, id) => {
       if (!vesselIds.has(id)) object.visible = visibleLayers[id] ?? true;
     });
@@ -324,6 +338,34 @@ export default function EmbryoScene({
         group.add(mesh);
       });
       highlight(group, segment.id === selectedStructure);
+    });
+  }, [stage, profile, visibleLayers, selectedStructure]);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    const stageId = stage.id as VitellineStageId;
+    HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
+      const group = api.objects.get(layer.id) as THREE.Group | undefined;
+      if (!group) return;
+      clearGroup(group);
+      const presentation = getHepaticLayerPresentation(layer, profile, stageId);
+      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.userData.vesselState = presentation.state;
+      group.userData.statusLabel = presentation.statusLabel;
+      layer.paths.forEach((pathItem) => {
+        const mesh = makeVesselMesh(
+          pathItem.points,
+          layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1),
+          layer.color,
+          presentation.opacity
+        );
+        if (!mesh) return;
+        mesh.userData.structureId = layer.id;
+        mesh.userData.pathId = pathItem.id;
+        group.add(mesh);
+      });
+      highlight(group, layer.id === selectedStructure);
     });
   }, [stage, profile, visibleLayers, selectedStructure]);
 

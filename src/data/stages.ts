@@ -33,12 +33,12 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     label: 'CS12',
     carnegieStage: 'Carnegie stage 12',
     age: 'Approximately 26–30 days in the 2008 review',
-    title: 'Hepatic diverticulum and invasion',
-    summary: 'The hepatic bud expands into the transverse septum. Hepatoblast invasion and early vascular relationships become increasingly important.',
+    title: 'Hepatic invasion and early sinusoids',
+    summary: 'The hepatic bud expands into the transverse septum. Early sinusoidal channels appear among invading hepatoblast cords in the classical synthesis; the human reconstruction describes sinusoids entering from the venous sinus during this developmental window.',
     events: [
-      'Distinguish hepatoblast tissue from endothelial channels.',
-      'Keep the primitive gut and duodenum as spatial reference structures.',
-      'Do not interpret schematic geometry as measured specimen dimensions.'
+      'Separate hepatoblast cords from endothelial sinusoidal channels.',
+      'The sinusoidal plexus is a schematic microvascular network, not a measured capillary reconstruction.',
+      'Keep the classical and human-reconstruction explanations of sinusoidal origin distinct.'
     ],
     liverScale: 0.66,
     duodenumScale: 0.82
@@ -48,12 +48,12 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     label: 'CS13',
     carnegieStage: 'Carnegie stage 13',
     age: 'Approximately 28–32 days in the 2008 review',
-    title: 'Hepatic enclosure and early anastomosis',
-    summary: 'The hepatic primordium becomes more vascular. The 2017 human reconstruction describes vitelline conduits enclosed by the growing liver and a dorsal extrahepatic intervitelline connection.',
+    title: 'Hepatic enclosure and expanding plexus',
+    summary: 'The liver encloses the vitelline conduits while the intrahepatic microvascular network expands. The classical profile introduces venae advehentes and venae revehentes; the human reconstruction describes sinusoidal entry from the venous sinus and temporarily identifiable large venous conduits.',
     events: [
-      'The human-reconstruction profile describes a dorsal intervitelline anastomosis.',
-      'The right intrahepatic vitelline conduit is wider than the left in the reported series.',
-      'The classical profile uses its own anastomotic sequence and must remain separate.'
+      'The classical afferent and efferent channels are separate from the sinusoidal mesh.',
+      'The human-reconstruction profile keeps the larger vitelline conduits identifiable after enclosure.',
+      'Do not treat a schematic plexus path as a measured embryonic capillary.'
     ],
     liverScale: 0.82,
     duodenumScale: 0.9
@@ -63,12 +63,12 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     label: 'CS14',
     carnegieStage: 'Carnegie stage 14',
     age: 'Approximately 31–35 days in the 2008 review',
-    title: 'Asymmetric venous remodeling',
-    summary: 'Right-sided dominance becomes more evident. The 2017 reconstruction reports a transient, smaller ventral intervitelline connection during this stage window.',
+    title: 'Asymmetric hepatic drainage',
+    summary: 'Right-sided hepatic drainage becomes more prominent. In the 2017 reconstruction, portal branches are identifiable from the right vitelline conduit, while the left-sided portal branches are associated with the left umbilical vein.',
     events: [
-      'Keep right and left vessel identity explicit.',
-      'A transient ventral connection belongs only to the 2017 profile and its reported stage window.',
-      'Do not label an unobserved connection as biologically regressed.'
+      'The human profile shows a right-dominant hepatic draining network developing from the hepatocardiac channel.',
+      'The left portal branches are umbilical-derived in the 2017 reconstruction and are not drawn in this vitelline-only module.',
+      'The transient ventral intervitelline connection is a separate extrahepatic feature.'
     ],
     liverScale: 0.98,
     duodenumScale: 0.96
@@ -78,12 +78,12 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     label: 'CS15',
     carnegieStage: 'Carnegie stage 15',
     age: 'Approximately 35–38 days in the 2008 review',
-    title: 'Portal branches become distinct',
-    summary: 'Portal branches are identifiable in the developing liver. The 2017 reconstruction describes right vitelline and left umbilical contributions to intrahepatic portal branches.',
+    title: 'Intrahepatic portal pathways',
+    summary: 'Portal branches become more distinct. The 2017 reconstruction assigns right-sided branches to the right vitelline (portal) conduit and left-sided branches to the left umbilical vein; this module renders only the right vitelline contribution.',
     events: [
-      'The right and left intrahepatic portal pathways must not be assigned one universal lineage.',
-      'The left umbilical vein is context anatomy in this vitelline-focused milestone.',
-      'The ductus venosus remains a separate umbilical-system shunt.'
+      'Right portal branches are shown emerging from the right intrahepatic vitelline conduit.',
+      'Left portal branches are not vitelline-derived in the 2017 reconstruction and remain outside this module.',
+      'The portal sinus and venous duct are distinct shunts and are deferred to later milestones.'
     ],
     liverScale: 1.08,
     duodenumScale: 1.0
@@ -93,12 +93,12 @@ export const DEVELOPMENT_STAGES: DevelopmentStage[] = [
     label: 'CS16',
     carnegieStage: 'Carnegie stage 16',
     age: 'Approximately 37–42 days in the 2008 review',
-    title: 'Fetal hepatic circulation pattern',
-    summary: 'The classical synthesis describes a more definitive fetal hepatic circulation pattern. The hepatic segment of the IVC must be distinguished from the rest of the composite IVC.',
+    title: 'Developing fetal hepatic circulation',
+    summary: 'The selected model now shows a more organized fetal hepatic vascular arrangement. Sinusoidal endothelial differentiation continues beyond this embryonic stage range, so the model is not a mature adult liver.',
     events: [
-      'Trace portal afferent and hepatic efferent pathways separately.',
-      'Show the right hepatocardiac / hepatic IVC contribution without coloring the entire IVC as vitelline-derived.',
-      'Preserve source-specific lineage notes.'
+      'Trace afferent portal and efferent hepatic drainage as distinct pathways.',
+      'The hepatic IVC contribution must not be confused with the entire composite IVC.',
+      'Keep source-specific sinusoidal and portal lineage notes visible.'
     ],
     liverScale: 1.16,
     duodenumScale: 1.04
@@ -111,6 +111,6 @@ export const PROFILE_LABELS: Record<EvidenceProfile, string> = {
 };
 
 export const PROFILE_DESCRIPTIONS: Record<EvidenceProfile, string> = {
-  'classical-2008': 'Classical vestigial / anastomotic interpretation summarized by Collardeau-Frachon and Scoazec. Its three prehepatic plus subdiaphragmatic connection scheme is kept distinct.',
-  'human-2017': 'Human embryo reconstruction interpretation reported by Hikspoors and colleagues. Its observed dorsal and transient ventral connections are not blended with the classical four-connection scheme.'
+  'classical-2008': 'Classical vestigial / anastomotic interpretation summarized by Collardeau-Frachon and Scoazec. Includes the sinusoidal plexus, venae advehentes and venae revehentes; its three prehepatic plus subdiaphragmatic connection scheme remains distinct.',
+  'human-2017': 'Human embryo reconstruction interpretation reported by Hikspoors and colleagues. Sinusoids enter from the venous sinus, larger conduits remain temporarily identifiable and a right-dominant drainage network develops. Its dorsal and transient ventral connections are not blended with the classical scheme.'
 };

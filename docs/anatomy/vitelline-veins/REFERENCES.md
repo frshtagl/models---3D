@@ -16,6 +16,9 @@
 
 **Use in this project:**
 - hepatic primordium and vascular chronology;
+- early hepatic sinusoidal appearance and proposed precursor mechanisms;
+- venae advehentes and venae revehentes;
+- sinusoidal endothelial differentiation during later fetal development;
 - four intervitelline connections: three prehepatic and one subdiaphragmatic;
 - classical afferent / efferent hepatic channels;
 - venae advehentes and venae revehentes;
@@ -40,6 +43,8 @@
 - 3D reconstructions of human embryos from 3 to 10 weeks;
 - common hepatocardiac channels;
 - vitelline-vein enclosure by hepatoblasts;
+- sinusoidal entry from the venous sinus and formation of an intrahepatic network;
+- retrograde development of asymmetric draining veins from hepatocardiac channels;
 - right-left asymmetry of intrahepatic vitelline conduits;
 - dorsal and transient ventral extrahepatic intervitelline connections;
 - left-sided midgut-derived portal precursor;

@@ -14,6 +14,7 @@ import {
 import type { StructureVisibility } from './data/structures';
 import { VITELLINE_NODES, VITELLINE_SEGMENTS, VITELLINE_NETWORK_ISSUES, getVesselPresentation } from './data/vitellineNetwork';
 import type { VitellineStageId } from './data/vitellineNetwork';
+import { HEPATIC_VASCULAR_LAYERS, HEPATIC_VASCULAR_NODES, HEPATIC_VASCULAR_NETWORK_ISSUES, getHepaticLayerPresentation } from './data/hepaticVascularNetwork';
 
 const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
   { id: 'anterior', label: 'Anterior' },
@@ -29,7 +30,7 @@ export default function App() {
   const [profile, setProfile] = useState<EvidenceProfile>('human-2017');
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('oblique');
   const [visibleLayers, setVisibleLayers] = useState<StructureVisibility>(() => ({ ...DEFAULT_VISIBILITY }));
-  const [selectedStructure, setSelectedStructure] = useState<string | null>('vitelline-right-extrahepatic');
+  const [selectedStructure, setSelectedStructure] = useState<string | null>('hepatic-sinusoidal-plexus');
   const [playing, setPlaying] = useState(false);
 
   const stage = DEVELOPMENT_STAGES[stageIndex];
@@ -38,6 +39,12 @@ export default function App() {
   const selectedVesselPresentation = selectedVessel
     ? getVesselPresentation(selectedVessel, profile, stage.id as VitellineStageId)
     : null;
+  const selectedHepaticLayer = HEPATIC_VASCULAR_LAYERS.find((item) => item.id === selectedStructure);
+  const selectedHepaticPresentation = selectedHepaticLayer
+    ? getHepaticLayerPresentation(selectedHepaticLayer, profile, stage.id as VitellineStageId)
+    : null;
+  const networkIssues = [...VITELLINE_NETWORK_ISSUES, ...HEPATIC_VASCULAR_NETWORK_ISSUES];
+  const hepaticPathCount = HEPATIC_VASCULAR_LAYERS.reduce((total, layer) => total + layer.paths.length, 0);
 
   useEffect(() => {
     if (!playing) return;
@@ -77,7 +84,7 @@ export default function App() {
         <div className="topbar-right">
           <span className="status-dot" />
           <span>LOCAL INTERACTIVE MODULE</span>
-          <span className="version-chip">v0.2 · PAIRED VITELLINE VEINS</span>
+          <span className="version-chip">v0.3 · HEPATIC SINUSOIDAL NETWORK</span>
         </div>
       </header>
 
@@ -103,7 +110,7 @@ export default function App() {
             <p className="profile-description">{PROFILE_DESCRIPTIONS[profile]}</p>
             <div className="profile-note">
               <span className="note-icon">i</span>
-              Changing this profile changes the reported remodeling sequence. The two vessel interpretations are kept separate and are never blended.
+              {profile === 'human-2017' ? 'Human reconstruction: sinusoids enter from the venous sinus; right portal branches are shown from the right vitelline conduit. Left portal branches from the left umbilical vein are outside this vitelline-only module.' : 'Classical account: venae advehentes carry blood toward sinusoids and venae revehentes drain toward cranial outflow. Their anastomotic boundary geometry is deferred to Milestone 4.'}
             </div>
           </section>
 
@@ -149,8 +156,8 @@ export default function App() {
         <section className="viewer-column">
           <div className="viewer-toolbar">
             <div>
-              <div className="eyebrow">INTERACTIVE VITELLINE VENOUS NETWORK</div>
-              <h1>Paired vitelline veins <span>/ {stage.label}</span></h1>
+              <div className="eyebrow">INTERACTIVE HEPATIC VASCULAR NETWORK</div>
+              <h1>Sinusoids & hepatic channels <span>/ {stage.label}</span></h1>
             </div>
             <div className="camera-toolbar">
               {CAMERA_PRESETS.map((preset) => (
@@ -187,9 +194,10 @@ export default function App() {
               </div>
             </div>
             <div className="viewport-legend">
-              <span><i className="legend-dot right-vein-dot" /> Right vitelline</span>
-              <span><i className="legend-dot left-vein-dot" /> Left vitelline</span>
-              <span><i className="legend-dot gut-dot" /> Gut reference</span>
+              <span><i className="legend-dot right-vein-dot" /> Vitelline conduits</span>
+              <span><i className="legend-dot sinusoid-dot" /> Sinusoids</span>
+              <span><i className="legend-dot afferent-dot" /> Afferent</span>
+              <span><i className="legend-dot efferent-dot" /> Efferent / drainage</span>
             </div>
             <div className="scene-instruction">DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM <span>·</span> RIGHT-DRAG TO PAN</div>
             <div className="schematic-stamp">SCHEMATIC · NOT TO SCALE</div>
@@ -272,6 +280,17 @@ export default function App() {
                     <small>{selectedVessel.side} side · {selectedVessel.region.replace('-', ' ')}</small>
                   </div>
                 )}
+                {selectedHepaticLayer && selectedHepaticPresentation && (
+                  <>
+                    <div className="vessel-state-card">
+                      <div className="section-label">DEVELOPMENTAL STATE</div>
+                      <strong>{selectedHepaticPresentation.statusLabel}</strong>
+                      <small>{selectedHepaticLayer.kind.replace(/-/g, ' ')} · {selectedHepaticLayer.paths.length} schematic paths</small>
+                    </div>
+                    <p className="evidence-note">{selectedHepaticLayer.evidence[profile]}</p>
+                    <div className="source-meta">Evidence register: {selectedHepaticLayer.sourceIds.join(' · ')}</div>
+                  </>
+                )}
                 <div className="inspector-meta">
                   <span>Stage context</span>
                   <strong>{stage.label}</strong>
@@ -285,23 +304,24 @@ export default function App() {
           <section className="inspector-card milestone-card">
             <div className="section-label">NETWORK VALIDATION</div>
             <div className="scope-status">
-              <span className={VITELLINE_NETWORK_ISSUES.length === 0 ? 'status-dot' : 'status-dot warning-dot'} />
-              {VITELLINE_NETWORK_ISSUES.length === 0 ? 'Graph structure checks passed' : VITELLINE_NETWORK_ISSUES.length + ' graph issues found'}
+              <span className={networkIssues.length === 0 ? 'status-dot' : 'status-dot warning-dot'} />
+              {networkIssues.length === 0 ? 'Vessel graph checks passed' : networkIssues.length + ' graph issues found'}
             </div>
-            <p>{VITELLINE_SEGMENTS.length} independently selectable segments · {VITELLINE_NODES.length} named connection nodes. No intervitelline anastomoses are included yet.</p>
-            {VITELLINE_NETWORK_ISSUES.length > 0 && (
-              <ul className="network-issues">{VITELLINE_NETWORK_ISSUES.map((issue) => <li key={issue}>{issue}</li>)}</ul>
+            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {hepaticPathCount} hepatic paths · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length} graph nodes.</p>
+            <p>Classical anastomosis geometry and the left umbilical-derived portal branches remain outside this milestone.</p>
+            {networkIssues.length > 0 && (
+              <ul className="network-issues">{networkIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
             )}
             <div className="scope-progress"><span /></div>
-            <div className="scope-foot"><span>Milestone 2 · paired channels</span><strong>IMPLEMENTED</strong></div>
+            <div className="scope-foot"><span>Milestone 3 · hepatic microvasculature</span><strong>IMPLEMENTED</strong></div>
           </section>
         </aside>
       </main>
 
       <footer className="app-footer">
-        <span>EMBRYOLAB <b>·</b> VITELLINE VEIN MODULE</span>
+        <span>EMBRYOLAB <b>·</b> HEPATIC VASCULAR DEVELOPMENT</span>
         <span>Human development · Evidence-aware · Procedural reference geometry</span>
-        <span>Development build 0.2.0</span>
+        <span>Development build 0.3.0</span>
       </footer>
     </div>
   );
