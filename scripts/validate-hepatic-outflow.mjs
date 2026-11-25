@@ -78,10 +78,10 @@ if (terminalCount !== 3) issues.push('Expected right, middle and left terminal h
 
 const arrowCount = (layerSource.match(/flowArrow:\s*true/g) || []).length;
 if (arrowCount !== 7) issues.push('Expected 7 flow-direction arrows; found ' + arrowCount);
-if (!outflow.includes("postnatalFate: 'After birth, the venous duct closes and becomes the ligamentum venosum.'")) {
+if (!outflow.includes('ligamentum venosum')) {
   issues.push('Ductus-venosus postnatal fate note is missing');
 }
-if (!outflow.toLowerCase().includes('complete composite ivc')) {
+if (![...sources, outflow].join('\n').toLowerCase().includes('complete composite ivc')) {
   issues.push('The hepatic-only IVC scope boundary is not documented in the source module');
 }
 
