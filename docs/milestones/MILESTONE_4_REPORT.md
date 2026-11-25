@@ -74,7 +74,7 @@ The human dorsal channel is not separately resolved in the cited description aft
 
 The transient ventral connection is rendered only in CS14. It is not equated with the classical inferior / caudal-ventral connection.
 
-The 2017 article describes the portal sinus as a left umbilical-to-right vitelline shunt, and states that the left vitelline vein was already regressing when this shunt developed. The classical subhepatic intervitelline anastomosis and the human umbilico-vitelline shunt are therefore not treated as one identical formation mechanism. The umbilical vein itself remains outside this vitelline-only milestone.
+The 2017 article describes the portal sinus as a left umbilical-to-right vitelline shunt, and states that the left vitelline vein was already regressing when this shunt developed. The classical subhepatic intervitelline anastomosis and the human umbilico-vitelline shunt are therefore not treated as one identical formation mechanism. The left umbilical vein itself remains outside Milestone 4; Milestone 5 adds only a simplified context path for teaching the portal sinus and branch origins.
 
 ## 7. Interaction and inspector
 

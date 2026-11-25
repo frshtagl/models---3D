@@ -1,6 +1,6 @@
 # Interactive Embryonic Venous Development Laboratory — Architecture
 
-**Status:** Milestone 0 proposal; no application code implemented yet  
+**Status:** Original Milestone 0 architecture proposal; the React / TypeScript / Vite / Three.js browser workstation is now implemented through Milestone 5  
 **Repository:** frshtagl/models---3D  
 **Initial module:** Vitelline veins  
 **Future modules:** Umbilical veins, cardinal veins
@@ -9,7 +9,7 @@
 
 Build one reusable 3D embryology workstation with modular anatomy datasets. Each venous family is a module that plugs into a shared viewer, timeline, selection system, lineage engine, evidence registry and assessment framework.
 
-The first module must prove the shared core without prematurely implementing the other venous systems.
+The first module now demonstrates the shared core with vitelline, hepatic and portal pathways. Full umbilical and cardinal venous families remain separate future modules.
 
 ## 2. Proposed technology
 

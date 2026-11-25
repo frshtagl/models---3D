@@ -5,10 +5,10 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 ## Current status
 
 - **Development branch:** feature/vitelline-veins-3d
-- **Current milestone:** Milestone 4 — profile-specific intervitelline anastomoses
+- **Current milestone:** Milestone 5 — portal vein, portal sinus and browser teaching walkthrough
 - **Application:** React + TypeScript + Vite + Three.js
-- **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, and six profile-specific intervitelline anastomosis layers with embedded parent-vessel attachment nodes
-- **Verification:** attachment-node audit passed; GitHub Actions TypeScript validation and production build passed; browser visual review pending
+- **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, six profile-specific intervitelline connections, classical and human portal-trunk pathways, two portal-sinus mechanisms, simplified left umbilical inflow and first-order portal branches
+- **Verification:** portal graph and attachment audit pending; GitHub Actions TypeScript validation and production build pending; browser visual review pending
 - **Scientific profiles:** stage-aware classical 2008 synthesis and human 2017 reconstruction profiles
 
 ## Run locally
@@ -38,8 +38,12 @@ Production verification:
 - Inspect eight vitelline-vein segments connected through twenty named vitelline graph nodes, including ten embedded anastomosis attachment points.
 - Inspect seven hepatic vascular layers containing 33 editable paths, including a connected sinusoidal plexus.
 - Compare classical venae advehentes / revehentes with human-reconstruction sinusoidal entry and right-dominant hepatic drainage.
-- Inspect right vitelline-derived portal branches without mislabelling the left umbilical-derived portal branches.
+- Compare the classical three-segment portal trunk with the human midgut-derived portal precursor and right vitelline continuation.
+- Compare the classical subhepatic-anastomosis portal sinus with the human intrahepatic umbilico-vitelline shunt.
+- Inspect right vitelline-derived and left umbilical-derived portal branches with the gallbladder / Cantlie orientation guide.
+- Run the nine-step in-browser portal-vein teaching walkthrough and use full-screen mode for classroom projection.
 - Inspect four classical intervitelline connections or the two human-reconstruction connections without overlaying incompatible models.
+- Inspect nine portal-system layers with 19 editable paths and separate classical / human portal-sinus mechanisms.
 - Inspect the human dorsal connection relative to the dorsal pancreatic bud and the transient CS14 ventral connection.
 - Navigate dorsal / posterior and ventral / anterior anastomoses relative to the duodenum.
 - Follow the paired yolk-sac roots, extrahepatic trunks, intrahepatic conduits and hepatocardiac channels.
@@ -74,6 +78,10 @@ They must not be blended into one invented developmental sequence. Each profile 
 15. [Milestone 4 report](docs/milestones/MILESTONE_4_REPORT.md)
 16. [Intervitelline anastomosis anatomy guide](docs/anatomy/vitelline-veins/INTERVITELLINE_ANASTOMOSES.md)
 17. [Intervitelline graph architecture](docs/architecture/INTERVITELLINE_GRAPH.md)
+18. [Portal vein development guide](docs/anatomy/vitelline-veins/PORTAL_VEIN_DEVELOPMENT.md)
+19. [Portal vascular graph architecture](docs/architecture/PORTAL_VASCULAR_GRAPH.md)
+20. [Milestone 5 report](docs/milestones/MILESTONE_5_REPORT.md)
+21. [Browser teaching guide](docs/teaching/PORTAL_VEIN_BROWSER_TEACHING_GUIDE.md)
 
 ## Planned development
 
@@ -82,8 +90,8 @@ They must not be blended into one invented developmental sequence. Each profile 
 - Milestone 2: paired vitelline veins and yolk-sac drainage — implemented; the current branch CI build also compiles this milestone.
 - Milestone 3: hepatic sinusoidal plexus and intrahepatic venous pathways — implemented; TypeScript and production build passed; browser visual review pending.
 - Milestone 4: model-specific intervitelline anastomoses — implemented; attachment audit, TypeScript validation and production build passed; browser visual review pending.
-- Milestone 5: portal trunk, portal sinus and competing lineage tracing.
-- Milestone 6: hepatic outflow and context-only fetal circulation.
+- Milestone 5: portal trunk, portal sinus, first-order portal branches and browser teaching walkthrough — source implementation added; graph / CI / browser verification pending.
+- Milestone 6: hepatic outflow, venous duct and context-only fetal circulation.
 - Milestone 7: learning, exploration and assessment tools.
 - Milestone 8: scientific review, verification and release.
 

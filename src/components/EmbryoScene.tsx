@@ -8,6 +8,7 @@ import { VITELLINE_SEGMENTS, getVesselPresentation } from '../data/vitellineNetw
 import type { Point3, VitellineStageId } from '../data/vitellineNetwork';
 import { HEPATIC_VASCULAR_LAYERS, getHepaticLayerPresentation } from '../data/hepaticVascularNetwork';
 import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_LANDMARKS, getIntervitellinePresentation } from '../data/intervitellineNetwork';
+import { PORTAL_LANDMARKS, PORTAL_VASCULAR_LAYERS, getPortalLayerPresentation } from '../data/portalNetwork';
 
 export type CameraPreset = 'anterior' | 'posterior' | 'right' | 'left' | 'superior' | 'inferior' | 'oblique' | 'reset';
 
@@ -93,6 +94,25 @@ function makeDorsalPancreaticBud() {
     INTERVITELLINE_LANDMARKS[0].position[1],
     INTERVITELLINE_LANDMARKS[0].position[2]
   );
+  return mesh;
+}
+
+function makePortalGallbladder() {
+  const landmark = PORTAL_LANDMARKS.find((item) => item.id === 'portal-gallbladder');
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.14, 24, 18),
+    new THREE.MeshStandardMaterial({
+      color: landmark?.color ?? '#a6b86d',
+      roughness: 0.58,
+      transparent: true,
+      opacity: 0.92,
+      emissive: '#263015',
+      emissiveIntensity: 0.12
+    })
+  );
+  mesh.scale.set(0.72, 1.48, 0.72);
+  const position = landmark?.position ?? [0.05, 1.13, -0.43];
+  mesh.position.set(position[0], position[1], position[2]);
   return mesh;
 }
 
@@ -213,6 +233,7 @@ export default function EmbryoScene({
     ], 0.19, '#dcae7a'));
 
     add('dorsal-pancreatic-bud', makeDorsalPancreaticBud());
+    add('portal-gallbladder', makePortalGallbladder());
 
     add('foregut', tube([
       new THREE.Vector3(-0.55, 2.25, -0.08),
@@ -261,6 +282,9 @@ export default function EmbryoScene({
     });
     INTERVITELLINE_ANASTOMOSES.forEach((item) => {
       add(item.id, new THREE.Group());
+    });
+    PORTAL_VASCULAR_LAYERS.forEach((layer) => {
+      add(layer.id, new THREE.Group());
     });
 
     const grid = new THREE.GridHelper(12, 24, '#244057', '#172b3d');
@@ -336,7 +360,8 @@ export default function EmbryoScene({
     const vesselIds = new Set([
       ...VITELLINE_SEGMENTS.map((segment) => segment.id),
       ...HEPATIC_VASCULAR_LAYERS.map((layer) => layer.id),
-      ...INTERVITELLINE_ANASTOMOSES.map((item) => item.id)
+      ...INTERVITELLINE_ANASTOMOSES.map((item) => item.id),
+      ...PORTAL_VASCULAR_LAYERS.map((layer) => layer.id)
     ]);
     api.objects.forEach((object, id) => {
       if (!vesselIds.has(id)) object.visible = visibleLayers[id] ?? true;
@@ -428,12 +453,45 @@ export default function EmbryoScene({
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
+    const stageId = stage.id as VitellineStageId;
+    PORTAL_VASCULAR_LAYERS.forEach((layer) => {
+      const group = api.objects.get(layer.id) as THREE.Group | undefined;
+      if (!group) return;
+      clearGroup(group);
+      const presentation = getPortalLayerPresentation(layer, profile, stageId);
+      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.userData.vesselState = presentation.state;
+      group.userData.statusLabel = presentation.statusLabel;
+      layer.paths.forEach((pathItem) => {
+        const mesh = makeVesselMesh(
+          pathItem.points,
+          layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1),
+          layer.color,
+          presentation.opacity
+        );
+        if (!mesh) return;
+        mesh.userData.structureId = layer.id;
+        mesh.userData.pathId = pathItem.id;
+        group.add(mesh);
+      });
+      highlight(group, layer.id === selectedStructure);
+    });
+  }, [stage, profile, visibleLayers, selectedStructure]);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!api) return;
     api.objects.get('liver')?.scale.setScalar(stage.liverScale);
     api.objects.get('duodenum')?.scale.setScalar(stage.duodenumScale);
     const pancreas = api.objects.get('dorsal-pancreatic-bud');
     if (pancreas) {
       pancreas.visible = (visibleLayers['dorsal-pancreatic-bud'] ?? true)
         && ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
+    }
+    const gallbladder = api.objects.get('portal-gallbladder');
+    if (gallbladder) {
+      gallbladder.visible = (visibleLayers['portal-gallbladder'] ?? true)
+        && ['cs14', 'cs15', 'cs16'].includes(stage.id);
     }
   }, [stage, visibleLayers]);
 

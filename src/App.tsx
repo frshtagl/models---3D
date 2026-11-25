@@ -16,6 +16,8 @@ import { VITELLINE_NODES, VITELLINE_SEGMENTS, VITELLINE_NETWORK_ISSUES, getVesse
 import type { VitellineStageId } from './data/vitellineNetwork';
 import { HEPATIC_VASCULAR_LAYERS, HEPATIC_VASCULAR_NODES, HEPATIC_VASCULAR_NETWORK_ISSUES, getHepaticLayerPresentation } from './data/hepaticVascularNetwork';
 import { INTERVITELLINE_ANASTOMOSES, INTERVITELLINE_NETWORK_ISSUES, getIntervitellinePresentation } from './data/intervitellineNetwork';
+import { PORTAL_NETWORK_ISSUES, PORTAL_NODES, PORTAL_VASCULAR_LAYERS, getPortalLayerPresentation } from './data/portalNetwork';
+import { PORTAL_TEACHING_STEPS } from './data/portalTeachingGuide';
 
 const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
   { id: 'anterior', label: 'Anterior' },
@@ -31,8 +33,11 @@ export default function App() {
   const [profile, setProfile] = useState<EvidenceProfile>('human-2017');
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('posterior');
   const [visibleLayers, setVisibleLayers] = useState<StructureVisibility>(() => ({ ...DEFAULT_VISIBILITY }));
-  const [selectedStructure, setSelectedStructure] = useState<string | null>('human-dorsal-extrahepatic-anastomosis');
+  const [selectedStructure, setSelectedStructure] = useState<string | null>('human-portal-trunk');
   const [playing, setPlaying] = useState(false);
+  const [teachingOpen, setTeachingOpen] = useState(false);
+  const [teachingStepIndex, setTeachingStepIndex] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const stage = DEVELOPMENT_STAGES[stageIndex];
   const selected = ANATOMICAL_STRUCTURES.find((item) => item.id === selectedStructure);
@@ -48,9 +53,16 @@ export default function App() {
   const selectedAnastomosisPresentation = selectedAnastomosis
     ? getIntervitellinePresentation(selectedAnastomosis, profile, stage.id as VitellineStageId)
     : null;
-  const networkIssues = [...VITELLINE_NETWORK_ISSUES, ...HEPATIC_VASCULAR_NETWORK_ISSUES, ...INTERVITELLINE_NETWORK_ISSUES];
+  const selectedPortalLayer = PORTAL_VASCULAR_LAYERS.find((item) => item.id === selectedStructure);
+  const selectedPortalPresentation = selectedPortalLayer
+    ? getPortalLayerPresentation(selectedPortalLayer, profile, stage.id as VitellineStageId)
+    : null;
+  const networkIssues = [...VITELLINE_NETWORK_ISSUES, ...HEPATIC_VASCULAR_NETWORK_ISSUES, ...INTERVITELLINE_NETWORK_ISSUES, ...PORTAL_NETWORK_ISSUES];
   const hepaticPathCount = HEPATIC_VASCULAR_LAYERS.reduce((total, layer) => total + layer.paths.length, 0);
   const intervitellinePointCount = INTERVITELLINE_ANASTOMOSES.reduce((total, item) => total + item.points.length, 0);
+  const portalPathCount = PORTAL_VASCULAR_LAYERS.reduce((total, layer) => total + layer.paths.length, 0);
+  const portalNodeCount = PORTAL_NODES.length;
+  const teachingStep = PORTAL_TEACHING_STEPS[teachingStepIndex];
 
   useEffect(() => {
     if (!playing) return;
@@ -59,6 +71,12 @@ export default function App() {
     }, 2400);
     return () => window.clearInterval(timer);
   }, [playing]);
+
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreen);
+  }, []);
 
   const changeVisibility = (id: string) => {
     setVisibleLayers((current) => ({ ...current, [id]: !(current[id] ?? true) }));
@@ -77,6 +95,49 @@ export default function App() {
     setStageIndex(Math.max(0, Math.min(DEVELOPMENT_STAGES.length - 1, index)));
   };
 
+  const applyTeachingStep = (index: number) => {
+    const next = PORTAL_TEACHING_STEPS[index];
+    if (!next) return;
+    const nextStageIndex = DEVELOPMENT_STAGES.findIndex((item) => item.id === next.stageId);
+    if (nextStageIndex < 0) return;
+    setPlaying(false);
+    setTeachingStepIndex(index);
+    setStageIndex(nextStageIndex);
+    setProfile(next.profile);
+    setCameraPreset(next.camera);
+    setSelectedStructure(next.selectedStructure);
+    setVisibleLayers(Object.fromEntries(
+      ANATOMICAL_STRUCTURES.map((item) => [item.id, next.visibleLayers.includes(item.id)])
+    ));
+    setTeachingOpen(true);
+  };
+
+  const moveTeachingStep = (direction: -1 | 1) => {
+    const nextIndex = teachingStepIndex + direction;
+    if (nextIndex < 0) return;
+    if (nextIndex >= PORTAL_TEACHING_STEPS.length) {
+      setTeachingOpen(false);
+      return;
+    }
+    applyTeachingStep(nextIndex);
+  };
+
+  const toggleTeachingGuide = () => {
+    if (teachingOpen) {
+      setTeachingOpen(false);
+      return;
+    }
+    applyTeachingStep(teachingStepIndex);
+  };
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => setIsFullscreen(false));
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => setIsFullscreen(false));
+    }
+  };
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -90,7 +151,9 @@ export default function App() {
         <div className="topbar-right">
           <span className="status-dot" />
           <span>LOCAL INTERACTIVE MODULE</span>
-          <span className="version-chip">v0.4 · INTERVITELLINE ANASTOMOSES</span>
+          <button className="topbar-action" onClick={toggleTeachingGuide}>{teachingOpen ? 'Hide teaching guide' : 'Teaching guide'}</button>
+          <button className="topbar-action" onClick={toggleFullscreen}>{isFullscreen ? 'Exit full screen' : 'Full screen'}</button>
+          <span className="version-chip">v0.5 · PORTAL VEIN DEVELOPMENT</span>
         </div>
       </header>
 
@@ -162,8 +225,8 @@ export default function App() {
         <section className="viewer-column">
           <div className="viewer-toolbar">
             <div>
-              <div className="eyebrow">INTERACTIVE INTERVITELLINE NETWORK</div>
-              <h1>Vitelline anastomoses <span>/ {stage.label}</span></h1>
+              <div className="eyebrow">INTERACTIVE PORTAL VEIN DEVELOPMENT</div>
+              <h1>Portal vein formation <span>/ {stage.label}</span></h1>
             </div>
             <div className="camera-toolbar">
               {CAMERA_PRESETS.map((preset) => (
@@ -188,6 +251,26 @@ export default function App() {
               cameraPreset={cameraPreset}
               onSelectStructure={setSelectedStructure}
             />
+            {teachingOpen && teachingStep && (
+              <section className="teaching-card" aria-live="polite" aria-label="Guided portal vein teaching walkthrough">
+                <div className="teaching-card-header">
+                  <div>
+                    <div className="eyebrow">TEACHING WALKTHROUGH · STEP {teachingStepIndex + 1} / {PORTAL_TEACHING_STEPS.length}</div>
+                    <div className="teaching-context">{PROFILE_LABELS[teachingStep.profile]} · {teachingStep.stageId.toUpperCase()}</div>
+                  </div>
+                  <button className="teaching-close" onClick={() => setTeachingOpen(false)} aria-label="Close teaching guide">×</button>
+                </div>
+                <div className="teaching-progress"><span style={{ width: ((teachingStepIndex + 1) / PORTAL_TEACHING_STEPS.length * 100) + '%' }} /></div>
+                <h3>{teachingStep.title}</h3>
+                <div className="teaching-learning-point">{teachingStep.learningPoint}</div>
+                <p>{teachingStep.narration}</p>
+                <div className="teaching-question"><strong>Ask the class</strong>{teachingStep.askLearners}</div>
+                <div className="teaching-actions">
+                  <button className="subtle-button" onClick={() => moveTeachingStep(-1)} disabled={teachingStepIndex === 0}>← Previous</button>
+                  <button className="play-button" onClick={() => moveTeachingStep(1)}>{teachingStepIndex === PORTAL_TEACHING_STEPS.length - 1 ? 'Finish lesson' : 'Next lesson →'}</button>
+                </div>
+              </section>
+            )}
             <div className="orientation-card">
               <div className="orientation-title">ANATOMICAL ORIENTATION</div>
               <div className="orientation-grid">
@@ -207,6 +290,10 @@ export default function App() {
               <span><i className="legend-dot classical-iva-dot" /> Classical IVA</span>
               <span><i className="legend-dot human-iva-dot" /> Human 2017 IVA</span>
               <span><i className="legend-dot pancreas-dot" /> Dorsal pancreatic bud</span>
+              <span><i className="legend-dot portal-dot" /> Portal trunk</span>
+              <span><i className="legend-dot umbilical-dot" /> Left umbilical vein</span>
+              <span><i className="legend-dot portal-sinus-dot" /> Portal sinus</span>
+              <span><i className="legend-dot portal-branch-dot" /> Portal branches</span>
             </div>
             <div className="scene-instruction">DRAG TO ORBIT <span>·</span> SCROLL TO ZOOM <span>·</span> RIGHT-DRAG TO PAN</div>
             <div className="schematic-stamp">SCHEMATIC · NOT TO SCALE</div>
@@ -315,6 +402,21 @@ export default function App() {
                     <div className="source-meta">Evidence register: {selectedAnastomosis.sourceIds.join(' · ')}</div>
                   </>
                 )}
+                {selectedPortalLayer && selectedPortalPresentation && (
+                  <>
+                    <div className="vessel-state-card">
+                      <div className="section-label">DEVELOPMENTAL STATE</div>
+                      <strong>{selectedPortalPresentation.statusLabel}</strong>
+                      <small>{selectedPortalLayer.profile === 'both' ? 'Shared context layer' : selectedPortalLayer.profile === 'classical-2008' ? 'Classical teaching model · 2008' : 'Human 3D reconstruction · 2017'} · {selectedPortalLayer.paths.length} path(s)</small>
+                    </div>
+                    <div className="inspector-meta">
+                      <span>Evidence profile</span>
+                      <strong>{PROFILE_LABELS[profile]}</strong>
+                    </div>
+                    <p className="evidence-note">{selectedPortalLayer.evidence[profile]}</p>
+                    <div className="source-meta">Evidence register: {selectedPortalLayer.sourceIds.join(' · ')}</div>
+                  </>
+                )}
                 <div className="inspector-meta">
                   <span>Stage context</span>
                   <strong>{stage.label}</strong>
@@ -331,21 +433,21 @@ export default function App() {
               <span className={networkIssues.length === 0 ? 'status-dot' : 'status-dot warning-dot'} />
               {networkIssues.length === 0 ? 'Vessel graph checks passed' : networkIssues.length + ' graph issues found'}
             </div>
-            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {hepaticPathCount} hepatic paths · {INTERVITELLINE_ANASTOMOSES.length} profile-specific anastomoses · {intervitellinePointCount} IVA centre-line points · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length} venous graph nodes.</p>
-            <p>Classical: four connections. Human 2017: dorsal plus CS14 transient ventral. The two topologies are never displayed together.</p>
+            <p>{VITELLINE_SEGMENTS.length} vitelline segments · {HEPATIC_VASCULAR_LAYERS.length} hepatic layers · {hepaticPathCount} hepatic paths · {INTERVITELLINE_ANASTOMOSES.length} intervitelline connections · {PORTAL_VASCULAR_LAYERS.length} portal layers · {portalPathCount} portal paths · {intervitellinePointCount} IVA points · {VITELLINE_NODES.length + HEPATIC_VASCULAR_NODES.length + portalNodeCount} total venous graph nodes.</p>
+            <p>Classical trunk: left vitelline limb + dorsal anastomosis + right vitelline limb. Human pathway: midgut precursor + dorsal crossing + right vitelline conduit. Portal-sinus mechanisms remain separate.</p>
             {networkIssues.length > 0 && (
               <ul className="network-issues">{networkIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
             )}
             <div className="scope-progress"><span /></div>
-            <div className="scope-foot"><span>Milestone 4 · intervitelline topology</span><strong>IMPLEMENTED</strong></div>
+            <div className="scope-foot"><span>Milestone 5 · portal system</span><strong>IMPLEMENTED</strong></div>
           </section>
         </aside>
       </main>
 
       <footer className="app-footer">
-        <span>EMBRYOLAB <b>·</b> INTERVITELLINE DEVELOPMENT</span>
+        <span>EMBRYOLAB <b>·</b> PORTAL VEIN DEVELOPMENT</span>
         <span>Human development · Evidence-aware · Procedural reference geometry</span>
-        <span>Development build 0.4.0</span>
+        <span>Development build 0.5.0</span>
       </footer>
     </div>
   );
