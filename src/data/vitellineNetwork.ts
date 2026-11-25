@@ -225,7 +225,7 @@ const rightIntrahepatic: VesselSegment = {
 
 const rightHepatocardiac: VesselSegment = {
   id: 'vitelline-right-hepatocardiac',
-  name: 'Right vitelline vein — hepatocardiac channel',
+  name: 'Right hepatocardiac channel — vitelline connection',
   side: 'right',
   region: 'hepatocardiac',
   fromNode: 'node-right-hepatic-exit',
@@ -238,7 +238,7 @@ const rightHepatocardiac: VesselSegment = {
   ],
   radius: 0.095,
   color: RIGHT,
-  description: 'The right hepatocardiac channel carries the right hepatic venous outflow toward the venous pole and becomes the dominant right-sided channel in the cited reconstructions.',
+  description: 'The hepatocardiac channel is a shared cranial venous outlet to the sinus venosus. This module shows its vitelline connection; the umbilical contribution is deferred to the umbilical module. The right-sided channel becomes dominant in the cited reconstructions.',
   states: statesFor('right', 'hepatocardiac')
 };
 
@@ -319,7 +319,7 @@ const leftIntrahepatic: VesselSegment = {
 
 const leftHepatocardiac: VesselSegment = {
   id: 'vitelline-left-hepatocardiac',
-  name: 'Left vitelline vein — hepatocardiac channel',
+  name: 'Left hepatocardiac channel — vitelline connection',
   side: 'left',
   region: 'hepatocardiac',
   fromNode: 'node-left-hepatic-exit',
@@ -332,7 +332,7 @@ const leftHepatocardiac: VesselSegment = {
   ],
   radius: 0.08,
   color: LEFT,
-  description: 'The left hepatocardiac channel becomes incorporated into the sinus venosus wall and regresses as a distinct channel in the human reconstruction. It is not the entire left vitelline vein.',
+  description: 'The shared left hepatocardiac outlet receives vitelline and umbilical contributions. This module shows only its vitelline connection. The channel becomes incorporated into the sinus venosus wall and regresses as a distinct channel in the human reconstruction; this is not the disappearance of the entire left vitelline vein.',
   states: statesFor('left', 'hepatocardiac'),
   pathOverrides: {
     'human-2017': {

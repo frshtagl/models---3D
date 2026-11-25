@@ -17,11 +17,11 @@ The initial graph contains 8 independently selectable segments and 10 named node
 | Right | Yolk-sac root | Right yolk-sac venous root | Right caudal junction |
 | Right | Extrahepatic trunk | Right caudal junction | Right hepatic entry |
 | Right | Intrahepatic conduit | Right hepatic entry | Right hepatocardiac junction |
-| Right | Hepatocardiac channel | Right hepatocardiac junction | Right venous-pole entry |
+| Right | Hepatocardiac outlet (vitelline connection) | Right hepatocardiac junction | Right venous-pole entry |
 | Left | Yolk-sac root | Left yolk-sac venous root | Left caudal junction |
 | Left | Extrahepatic trunk | Left caudal junction | Left hepatic entry |
 | Left | Intrahepatic conduit | Left hepatic entry | Left hepatocardiac junction |
-| Left | Hepatocardiac channel | Left hepatocardiac junction | Left venous-pole entry |
+| Left | Hepatocardiac outlet (vitelline connection) | Left hepatocardiac junction | Left venous-pole entry |
 
 The source graph is stored in src/data/vitellineNetwork.ts. It is the authoritative editable representation; the Three.js tubes are generated render geometry.
 
@@ -33,7 +33,7 @@ The source graph is stored in src/data/vitellineNetwork.ts. It is the authoritat
 - The inspector reports the active stage and profile-specific state.
 - Stage changes update vessel caliber and opacity.
 - The left intrahepatic conduit is represented differently in the two evidence profiles.
-- The right intrahepatic and hepatocardiac pathways become visually dominant in later stages.
+- The right intrahepatic and hepatocardiac pathways become visually dominant in later stages. Hepatocardiac channels are shared cranial outlets; only the vitelline connection is shown here, while their umbilical contribution is deferred.
 - The 3D scene retains the project-wide coordinate convention.
 
 ## 4. Evidence-profile handling
