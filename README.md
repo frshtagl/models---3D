@@ -8,7 +8,7 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 - **Current milestone:** Milestone 5 — portal vein, portal sinus and browser teaching walkthrough
 - **Application:** React + TypeScript + Vite + Three.js
 - **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, six profile-specific intervitelline connections, classical and human portal-trunk pathways, two portal-sinus mechanisms, simplified left umbilical inflow and first-order portal branches
-- **Verification:** portal graph and attachment audit pending; GitHub Actions TypeScript validation and production build pending; browser visual review pending
+- **Verification:** independent portal-path / attachment audit passed; GitHub Actions TypeScript validation and production build passed; browser visual review pending
 - **Scientific profiles:** stage-aware classical 2008 synthesis and human 2017 reconstruction profiles
 
 ## Run locally
@@ -90,7 +90,7 @@ They must not be blended into one invented developmental sequence. Each profile 
 - Milestone 2: paired vitelline veins and yolk-sac drainage — implemented; the current branch CI build also compiles this milestone.
 - Milestone 3: hepatic sinusoidal plexus and intrahepatic venous pathways — implemented; TypeScript and production build passed; browser visual review pending.
 - Milestone 4: model-specific intervitelline anastomoses — implemented; attachment audit, TypeScript validation and production build passed; browser visual review pending.
-- Milestone 5: portal trunk, portal sinus, first-order portal branches and browser teaching walkthrough — source implementation added; graph / CI / browser verification pending.
+- Milestone 5: portal trunk, portal sinus, first-order portal branches and browser teaching walkthrough — implemented; portal-path / attachment audit and GitHub Actions typecheck / production build passed; browser visual review pending.
 - Milestone 6: hepatic outflow, venous duct and context-only fetal circulation.
 - Milestone 7: learning, exploration and assessment tools.
 - Milestone 8: scientific review, verification and release.

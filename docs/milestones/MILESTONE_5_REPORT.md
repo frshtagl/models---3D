@@ -1,6 +1,6 @@
 # Milestone 5 — Portal Vein, Portal Sinus and Teaching Walkthrough
 
-**Status:** Source implementation committed; graph and CI verification pending  
+**Status:** Source implementation committed; independent portal-path / attachment audit passed; GitHub Actions TypeScript validation and production build passed; browser visual review pending  
 **Date:** 25 November 2026  
 **Branch:** feature/vitelline-veins-3d
 
@@ -111,6 +111,15 @@ The portal validator checks:
 - the classical portal trunk containing exactly three retained vitelline components;
 - the human portal pathway containing the midgut precursor, dorsal crossing and right vitelline continuation;
 - distinct classical and human portal-sinus endpoints.
+
+An independent source audit at commit 076fb96f44d98f6f0ba2551bce5f37ac4727d233 checked 31 vitelline / portal graph nodes, 19 portal paths and both embedded parent anchors; no missing node, path-endpoint mismatch or parent-anchor mismatch was found.
+
+GitHub Actions: https://github.com/frshtagl/models---3D/actions/runs/45669974332
+
+- TypeScript validation: passed.
+- Production build: passed.
+- Browser visual review: pending.
+- Specialist embryology review: pending.
 
 These are source-graph and coordinate checks. They do not replace visual inspection of the rendered 3D scene or expert anatomical review.
 

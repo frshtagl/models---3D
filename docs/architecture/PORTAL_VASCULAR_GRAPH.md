@@ -105,4 +105,4 @@ The portal validator checks:
 - five components in the human portal pathway;
 - different destination anchors for classical and human portal-sinus mechanisms.
 
-These are deterministic source-graph checks. They do not replace 3D visual inspection or expert anatomical review.
+An independent audit at commit 076fb96f44d98f6f0ba2551bce5f37ac4727d233 checked 19 portal paths and both embedded parent anchors with no endpoint or attachment mismatch. GitHub Actions TypeScript validation and production build passed: https://github.com/frshtagl/models---3D/actions/runs/45669974332. Browser visual review and specialist embryology review remain separate requirements.
