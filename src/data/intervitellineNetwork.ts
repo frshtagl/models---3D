@@ -157,11 +157,11 @@ export const INTERVITELLINE_ANASTOMOSES: IntervitellineAnastomosis[] = [
     ],
     '#5bc9a8',
     stateMap(
-      { cs10: 'not-yet-visible', cs12: 'not-yet-visible', cs13: 'developing', cs14: 'persistent', cs15: 'persistent', cs16: 'persistent' },
+      { cs10: 'not-yet-visible', cs12: 'not-yet-visible', cs13: 'developing', cs14: 'persistent', cs15: 'not-resolved', cs16: 'not-resolved' },
       allHiddenHuman
     ),
     {
-      'classical-2008': 'Collardeau-Frachon and Scoazec place the superior / subhepatic anastomosis on the ventral side of the duodenal segment, beneath the hepatic primordium. Their classical account describes its later transformation into the portal sinus (sinus intermedius). The CS13–CS16 display bins are a schematic teaching chronology, not exact observed onset dates.',
+      'classical-2008': 'Collardeau-Frachon and Scoazec place the superior / subhepatic anastomosis on the ventral side of the duodenal segment, beneath the hepatic primordium. Their classical account describes its later transformation into the portal sinus (sinus intermedius). The left-to-right intervitelline bridge is therefore not drawn as a persistent separate connection after CS14; the umbilical-to-portal sinus is deferred to Milestone 5. The CS13–CS14 display bins are a schematic teaching chronology, not exact observed onset dates.',
       'human-2017': 'Not drawn as a left-to-right intervitelline connection in the 2017 human reconstruction. Its portal-sinus account is different: a left umbilical-to-right vitelline shunt develops intrahepatically.'
     },
     ['CF2008']
@@ -247,11 +247,11 @@ export const INTERVITELLINE_ANASTOMOSES: IntervitellineAnastomosis[] = [
     ],
     '#5bc9a8',
     stateMap(
-      { cs10: 'not-yet-visible', cs12: 'not-yet-visible', cs13: 'developing', cs14: 'persistent', cs15: 'persistent', cs16: 'persistent' },
+      { cs10: 'not-yet-visible', cs12: 'not-yet-visible', cs13: 'developing', cs14: 'persistent', cs15: 'not-resolved', cs16: 'not-resolved' },
       allHiddenHuman
     ),
     {
-      'classical-2008': 'The review locates the subdiaphragmatic anastomosis above the hepatic primordium and immediately beneath the sinus venosus. The venae revehentes drain toward this connection, from which blood passes to the sinus venosus.',
+      'classical-2008': 'The review locates the subdiaphragmatic anastomosis above the hepatic primordium and immediately beneath the sinus venosus. The venae revehentes drain toward this connection, from which blood passes to the sinus venosus. It is shown through the CS14 symmetrical-stage bin; later hepatic outflow remodeling is not represented as a persistent left-to-right bridge in this milestone.',
       'human-2017': 'The human reconstruction describes rightward dominance and remodeling of the hepatocardiac channels but does not identify this classical left-to-right subdiaphragmatic intervitelline bridge as a separate connection.'
     },
     ['CF2008']

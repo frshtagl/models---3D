@@ -35,7 +35,7 @@ The viewer marks it developing in CS13 and present in CS14. Later bins are **not
 - Passes ventral / anterior to the duodenal segment.
 - In the classical account, the subhepatic anastomosis enlarges and becomes the portal sinus (sinus intermedius).
 
-This classical portal-sinus description is not silently substituted for the human reconstruction's left umbilical-to-right vitelline shunt.
+This classical portal-sinus description is not silently substituted for the human reconstruction's left umbilical-to-right vitelline shunt. The viewer shows the left-to-right subhepatic bridge through the CS14 teaching bin; later bins are marked not separately resolved because the umbilical-to-portal sinus connection is outside this vitelline-only milestone.
 
 ### 1.4 Subdiaphragmatic anastomosis
 
@@ -43,7 +43,7 @@ This classical portal-sinus description is not silently substituted for the huma
 - Lies immediately below the sinus venosus.
 - Receives the classical venae revehentes, which drain the hepatic sinusoidal plexus toward the sinus venosus.
 
-It is spatially separate from the three prehepatic connections around the duodenum.
+It is spatially separate from the three prehepatic connections around the duodenum. The viewer shows it through the CS14 symmetrical-stage bin; later hepatic outflow remodeling is deferred rather than depicting this as a persistent left-to-right bridge.
 
 ## 2. Human 3D reconstruction — 2017
 

@@ -16,10 +16,10 @@ Six independently selectable anastomosis layers are implemented:
 
 | Evidence profile | Anastomosis | Spatial relationship | Stage presentation |
 |---|---|---|---|
-| Classical 2008 | Superior / subhepatic | Cranial-most prehepatic connection; ventral to duodenum, below hepatic primordium | Developing CS13; persistent CS14–CS16 |
+| Classical 2008 | Superior / subhepatic | Cranial-most prehepatic connection; ventral to duodenum, below hepatic primordium | Developing CS13; present CS14; later left-to-right bridge not separately resolved as it remodels into portal sinus |
 | Classical 2008 | Middle / dorsal / retroduodenal | Posterior to duodenum | First prehepatic connection described; approximate developing CS12, persistent CS13–CS16 |
 | Classical 2008 | Inferior / caudal-ventral | Most caudal prehepatic connection; ventral to distal duodenum | Developing CS13; present CS14; not separately resolved after CS14 |
-| Classical 2008 | Subdiaphragmatic | Above hepatic primordium, immediately below sinus venosus | Developing CS13; persistent CS14–CS16 |
+| Classical 2008 | Subdiaphragmatic | Above hepatic primordium, immediately below sinus venosus | Developing CS13; present CS14; later outflow remodeling not represented as a persistent bridge |
 | Human 2017 | Dorsal extrahepatic | Just caudal to dorsal pancreatic bud and dorsal to duodenum | Developing CS13; well formed early CS14; later fate not separately resolved |
 | Human 2017 | Small transient ventral | More caudal than dorsal connection, ventral to duodenum and just below liver | Reported temporarily during CS14 only |
 

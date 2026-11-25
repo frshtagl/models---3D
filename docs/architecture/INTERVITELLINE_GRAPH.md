@@ -54,7 +54,7 @@ The profile on each item determines which evidence model owns that layer. The op
 
 ## Stage states
 
-not-resolved is different from regressing. It means that the source does not separately trace the connection in the later stage range. This is used for the later human dorsal connection bins and for the classical inferior connection after the stage in which it is represented.
+not-resolved is different from regressing. It means that the source does not separately trace the connection in the later stage range or that the structure is being remodeled into a different named pathway. This is used for the later human dorsal connection bins, the classical inferior connection, the classical subhepatic bridge as it becomes the portal sinus, and the classical subdiaphragmatic bridge during later hepatic outflow remodeling.
 
 ## Geometry constraints
 
