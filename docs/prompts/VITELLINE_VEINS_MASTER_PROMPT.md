@@ -474,3 +474,33 @@ Before writing implementation code, return:
 Then begin **Milestone 0**. Do not skip directly to a polished final model. Build, inspect, test, and commit the system incrementally.
 
 **Quality standard:** the finished experience should feel like a professional medical-school embryology visualization workstation: anatomically disciplined, visually clear, genuinely interactive, easy to navigate, carefully sourced, and maintainable for years of further development.
+
+
+---
+
+## CRITICAL SCIENTIFIC ADDENDUM — OVERRIDES ANY CONFLICTING SINGLE-MODEL INSTRUCTION ABOVE
+
+Before implementation, read the repository files:
+- docs/anatomy/vitelline-veins/DEVELOPMENTAL_SPEC.md
+- docs/anatomy/vitelline-veins/FATE_MAP.md
+- docs/anatomy/vitelline-veins/EVIDENCE_AND_VARIANTS.md
+- docs/anatomy/vitelline-veins/REFERENCES.md
+- docs/architecture/COORDINATE_SYSTEM.md
+
+Do not present the classical vestigial / anastomotic model and the 2017 human 3D reconstruction / lineage model as one universally accepted sequence.
+
+The 2008 Collardeau-Frachon and Scoazec synthesis describes three prehepatic intervitelline anastomoses plus a fourth subdiaphragmatic connection, a classical segmental portal-trunk construction, and a subhepatic-anastomosis-derived portal sinus. The 2017 Hikspoors et al. human reconstruction describes identifiable vitelline conduits after liver enclosure, a dorsal extrahepatic intervitelline connection at CS13, a smaller transient ventral connection during CS14, and de novo left-to-right shunts involving the left umbilical vein, right vitelline vein and right hepatocardiac channel. It challenges large-scale fragmentation of embryonic veins.
+
+Implement these as two separate evidence profiles:
+1. Classical vestigial / anastomotic model.
+2. Human 3D reconstruction / lineage and hemodynamic model.
+
+The learner may compare them, but incompatible vessel paths must never be overlaid as if simultaneously present. Keep source-specific stage timing, terminology, and lineage metadata. In particular:
+- do not force all four classical connections into the 2017 reconstruction profile;
+- do not treat “not observed” as synonymous with “regressed”;
+- do not state that all intrahepatic portal branches are vitelline-derived;
+- distinguish portal sinus from ductus venosus / venous duct;
+- distinguish the right hepatocardiac channel from the entire IVC;
+- identify the right hepatic IVC contribution without assigning the whole IVC to the vitelline system.
+
+This addendum takes precedence over any earlier wording in this prompt that implies a single definitive sequence or presents the classical model as uncontested.
