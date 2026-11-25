@@ -24,6 +24,7 @@ interface Props {
   visibleLayers: StructureVisibility;
   selectedStructure: string | null;
   cameraPreset: CameraPreset;
+  zoomStep: number;
   onSelectStructure: (id: string) => void;
 }
 
@@ -367,10 +368,11 @@ function clearGroup(group: THREE.Group) {
 }
 
 export default function EmbryoScene({
-  stage, profile, cardinalModel, visibleLayers, selectedStructure, cameraPreset, onSelectStructure
+  stage, profile, cardinalModel, visibleLayers, selectedStructure, cameraPreset, zoomStep, onSelectStructure
 }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<SceneApi | null>(null);
+  const zoomStepRef = useRef(0);
   const selectRef = useRef(onSelectStructure);
   selectRef.current = onSelectStructure;
 
@@ -888,14 +890,29 @@ export default function EmbryoScene({
 
   useEffect(() => {
     const api = apiRef.current;
+    if (!api) {
+      zoomStepRef.current = zoomStep;
+      return;
+    }
+    const zoomRatio = Math.pow(0.9, zoomStep - zoomStepRef.current);
+    api.camera.position.sub(api.controls.target).multiplyScalar(zoomRatio).add(api.controls.target);
+    api.controls.update();
+    zoomStepRef.current = zoomStep;
+  }, [zoomStep]);
+
+  useEffect(() => {
+    const api = apiRef.current;
     if (!api) return;
     const position = viewFor(cameraPreset);
     api.camera.up.set(0, 1, 0);
     if (cameraPreset === 'superior') api.camera.up.set(0, 0, -1);
     if (cameraPreset === 'inferior') api.camera.up.set(0, 0, 1);
-    api.camera.position.set(position[0], position[1], position[2]);
-    api.camera.lookAt(0, 0.45, 0);
     api.controls.target.set(0, 0.45, 0);
+    api.camera.position.set(position[0], position[1], position[2]);
+    api.camera.position.sub(api.controls.target)
+      .multiplyScalar(Math.pow(0.9, zoomStepRef.current))
+      .add(api.controls.target);
+    api.camera.lookAt(api.controls.target);
     api.controls.update();
   }, [cameraPreset]);
 

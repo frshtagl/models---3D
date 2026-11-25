@@ -30,6 +30,7 @@ Production verification:
 ## Current interactions
 
 - Orbit, pan and zoom the 3D scene.
+- Use keyboard shortcuts for stage navigation, camera presets, zoom, teaching guide, full screen and anatomy-layer visibility; press `?` at any time to open the shortcut reference.
 - Switch between anterior, posterior, right, left, superior and inferior camera views.
 - Navigate Carnegie stages CS10, CS12, CS13, CS14, CS15 and CS16.
 - Play the stage sequence.
@@ -56,6 +57,8 @@ Production verification:
 - Inspect the stage-dependent right-sided dominance and the profile-specific left-sided remodeling.
 
 All current organ and vessel geometry is normalized schematic geometry, not a measured embryo reconstruction. Stage-dependent organ scaling and vessel radii are visual teaching parameters, not exact growth or diameter measurements.
+
+See the [keyboard shortcuts reference](docs/KEYBOARD_SHORTCUTS.md) for the complete key map.
 
 ## Scientific policy
 

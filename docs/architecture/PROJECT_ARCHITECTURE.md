@@ -219,3 +219,6 @@ The core anatomy viewer must not hard-code vitelline-specific assumptions. Futur
 - quizzes.
 
 They should reuse the same renderer, stage engine, selection UI, camera, evidence display, and tests.
+## Keyboard navigation
+
+The workstation supports global, focus-aware keyboard shortcuts for stage navigation, camera presets, zoom, teaching-guide and full-screen toggles, and anatomy-layer visibility. Shortcuts are suspended while the user edits form controls; `?` opens the in-app reference. The 3D camera zoom is applied relative to the current orbit direction so zooming does not reset the user's chosen view.

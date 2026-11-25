@@ -43,6 +43,8 @@ export default function App() {
   const [teachingOpen, setTeachingOpen] = useState(false);
   const [teachingStepIndex, setTeachingStepIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [zoomStep, setZoomStep] = useState(0);
 
   const stage = DEVELOPMENT_STAGES[stageIndex];
   const selected = ANATOMICAL_STRUCTURES.find((item) => item.id === selectedStructure);
@@ -166,6 +168,114 @@ export default function App() {
     }
   };
 
+  const resetCamera = () => {
+    setZoomStep(0);
+    setCameraPreset((current) => current === 'reset' ? 'oblique' : 'reset');
+  };
+
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return true;
+      return false;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isEditableTarget(event.target)) return;
+      if (event.target instanceof HTMLElement && event.target.closest('button')
+        && (event.code === 'Space' || event.key === 'Enter')) return;
+
+      const key = event.key.toLowerCase();
+
+      if (key === 'escape') {
+        if (shortcutsOpen) setShortcutsOpen(false);
+        else if (teachingOpen) setTeachingOpen(false);
+        return;
+      }
+
+      if (key === '?') {
+        event.preventDefault();
+        setShortcutsOpen((open) => !open);
+        return;
+      }
+
+      if (shortcutsOpen) return;
+
+      if (key === 'arrowleft') {
+        event.preventDefault();
+        setPlaying(false);
+        goToStage(stageIndex - 1);
+        return;
+      }
+      if (key === 'arrowright') {
+        event.preventDefault();
+        setPlaying(false);
+        goToStage(stageIndex + 1);
+        return;
+      }
+      if (key === 'home') {
+        event.preventDefault();
+        setPlaying(false);
+        goToStage(0);
+        return;
+      }
+      if (key === 'end') {
+        event.preventDefault();
+        setPlaying(false);
+        goToStage(DEVELOPMENT_STAGES.length - 1);
+        return;
+      }
+      if (key === ' ' || event.code === 'Space') {
+        event.preventDefault();
+        setPlaying((value) => !value);
+        return;
+      }
+      if (/^[1-6]$/.test(key)) {
+        event.preventDefault();
+        setCameraPreset(CAMERA_PRESETS[Number(key) - 1].id);
+        return;
+      }
+      if (key === '0' || key === 'r') {
+        event.preventDefault();
+        resetCamera();
+        return;
+      }
+      if (key === '+' || key === '=') {
+        event.preventDefault();
+        setZoomStep((value) => Math.min(12, value + 1));
+        return;
+      }
+      if (key === '-' || key === '_') {
+        event.preventDefault();
+        setZoomStep((value) => Math.max(-6, value - 1));
+        return;
+      }
+      if (key === 'g') {
+        event.preventDefault();
+        toggleTeachingGuide();
+        return;
+      }
+      if (key === 'f') {
+        event.preventDefault();
+        toggleFullscreen();
+        return;
+      }
+      if (key === 'a') {
+        event.preventDefault();
+        showAll();
+        return;
+      }
+      if (key === 'i') {
+        event.preventDefault();
+        isolateSelected();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [stageIndex, shortcutsOpen, teachingOpen, teachingStepIndex, selectedStructure]);
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -180,10 +290,70 @@ export default function App() {
           <span className="status-dot" />
           <span>LOCAL INTERACTIVE MODULE</span>
           <button className="topbar-action" onClick={toggleTeachingGuide}>{teachingOpen ? 'Hide teaching guide' : 'Teaching guide'}</button>
+          <button
+            className="topbar-action"
+            onClick={() => setShortcutsOpen((open) => !open)}
+            aria-expanded={shortcutsOpen}
+            aria-controls="keyboard-shortcuts"
+            title="Show keyboard shortcuts (?)"
+          >Shortcuts (?)</button>
           <button className="topbar-action" onClick={toggleFullscreen}>{isFullscreen ? 'Exit full screen' : 'Full screen'}</button>
           <span className="version-chip">v0.8 · REFINED VESSEL GEOMETRY</span>
         </div>
       </header>
+
+      {shortcutsOpen && (
+        <div
+          className="shortcuts-backdrop"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setShortcutsOpen(false);
+          }}
+        >
+          <section
+            className="shortcuts-dialog"
+            id="keyboard-shortcuts"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shortcuts-title"
+          >
+            <div className="shortcuts-header">
+              <div>
+                <div className="eyebrow">QUICK NAVIGATION</div>
+                <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+                <p>Navigate the stages and inspect the 3D model without reaching for the toolbar.</p>
+              </div>
+              <button className="teaching-close" onClick={() => setShortcutsOpen(false)} aria-label="Close keyboard shortcuts">×</button>
+            </div>
+
+            <div className="shortcut-groups">
+              <div className="shortcut-group">
+                <h3>Development stages</h3>
+                <div className="shortcut-row"><span>Previous / next stage</span><div className="shortcut-keys"><kbd>←</kbd><kbd>→</kbd></div></div>
+                <div className="shortcut-row"><span>First / last stage</span><div className="shortcut-keys"><kbd>Home</kbd><kbd>End</kbd></div></div>
+                <div className="shortcut-row"><span>Play / pause sequence</span><div className="shortcut-keys"><kbd>Space</kbd></div></div>
+              </div>
+
+              <div className="shortcut-group">
+                <h3>Camera and model</h3>
+                <div className="shortcut-row"><span>Camera views</span><div className="shortcut-keys"><kbd>1–6</kbd></div></div>
+                <div className="shortcut-row"><span>Zoom in / out</span><div className="shortcut-keys"><kbd>+</kbd><kbd>−</kbd></div></div>
+                <div className="shortcut-row"><span>Reset camera and zoom</span><div className="shortcut-keys"><kbd>0</kbd><kbd>R</kbd></div></div>
+                <div className="shortcut-row"><span>Show all anatomy layers</span><div className="shortcut-keys"><kbd>A</kbd></div></div>
+                <div className="shortcut-row"><span>Isolate selected structure</span><div className="shortcut-keys"><kbd>I</kbd></div></div>
+              </div>
+
+              <div className="shortcut-group">
+                <h3>Workspace</h3>
+                <div className="shortcut-row"><span>Toggle teaching guide</span><div className="shortcut-keys"><kbd>G</kbd></div></div>
+                <div className="shortcut-row"><span>Toggle full screen</span><div className="shortcut-keys"><kbd>F</kbd></div></div>
+                <div className="shortcut-row"><span>Show / hide this panel</span><div className="shortcut-keys"><kbd>?</kbd></div></div>
+                <div className="shortcut-row"><span>Close panel or guide</span><div className="shortcut-keys"><kbd>Esc</kbd></div></div>
+              </div>
+            </div>
+            <p className="shortcuts-note">Shortcuts pause stage playback when you move manually. They are suspended while typing or changing a form control.</p>
+          </section>
+        </div>
+      )}
 
       <main className="workspace">
         <aside className="panel left-panel">
@@ -280,7 +450,7 @@ export default function App() {
                   {preset.label}
                 </button>
               ))}
-              <button className="reset-button" onClick={() => setCameraPreset('reset')} title="Reset camera" aria-label="Reset camera">↺</button>
+              <button className="reset-button" onClick={resetCamera} title="Reset camera and zoom (0)" aria-label="Reset camera and zoom">↺</button>
             </div>
           </div>
 
@@ -292,6 +462,7 @@ export default function App() {
               visibleLayers={visibleLayers}
               selectedStructure={selectedStructure}
               cameraPreset={cameraPreset}
+              zoomStep={zoomStep}
               onSelectStructure={setSelectedStructure}
             />
             {teachingOpen && teachingStep && (
