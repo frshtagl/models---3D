@@ -4,9 +4,12 @@ const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf
 const sources = [
   read('src/data/vitellineNetwork.ts'),
   read('src/data/hepaticVascularNetwork.ts'),
-  read('src/data/portalNetwork.ts')
+  read('src/data/portalNetwork.ts'),
+  read('src/data/intervitellineNetwork.ts')
 ];
 const outflow = read('src/data/hepaticOutflowNetwork.ts');
+const teachingGuide = read('src/data/portalTeachingGuide.ts');
+const structures = read('src/data/structures.ts');
 
 const issues = [];
 const nodes = new Map();
@@ -18,6 +21,32 @@ for (const source of [...sources, outflow]) {
     const position = [Number(match[2]), Number(match[3]), Number(match[4])];
     if (nodes.has(id) && source === outflow) issues.push('Duplicate outflow node ID: ' + id);
     nodes.set(id, position);
+  }
+}
+
+
+const knownStructures = new Set();
+for (const source of [...sources, outflow, structures]) {
+  for (const match of source.matchAll(/id:\s*'([^']+)'/g)) knownStructures.add(match[1]);
+}
+for (const match of sources[2].matchAll(/portalLayer\(\s*'([^']+)'/g)) knownStructures.add(match[1]);
+for (const match of sources[3].matchAll(/anastomosis\(\s*'([^']+)'/g)) knownStructures.add(match[1]);
+for (const match of sources[2].matchAll(/portalLandmark\(\s*'([^']+)'/g)) knownStructures.add(match[1]);
+
+const contextText = teachingGuide.match(/const CONTEXT = \[([\s\S]*?)\];/)?.[1] ?? '';
+const contextLayers = [...contextText.matchAll(/'([^']+)'/g)].map((match) => match[1]);
+const stepText = teachingGuide.slice(teachingGuide.indexOf('export const PORTAL_TEACHING_STEPS'));
+const stepBlocks = stepText.split(/\n  \{\n    id:/).slice(1);
+if (stepBlocks.length !== 14) issues.push('Expected 14 guided teaching steps; found ' + stepBlocks.length);
+
+for (const block of stepBlocks) {
+  const stepId = block.match(/^ '([^']+)'/)?.[1] ?? block.match(/^'([^']+)'/)?.[1] ?? 'unknown-step';
+  const selected = block.match(/selectedStructure:\s*'([^']+)'/)?.[1];
+  const visibleBlock = block.match(/visibleLayers:\s*\[([\s\S]*?)\]/)?.[1] ?? '';
+  const visible = [...visibleBlock.matchAll(/'([^']+)'/g)].map((match) => match[1]).concat(contextLayers);
+  if (selected && !knownStructures.has(selected)) issues.push(stepId + ' selects unknown structure ' + selected);
+  for (const layerId of new Set(visible)) {
+    if (!knownStructures.has(layerId)) issues.push(stepId + ' shows unknown layer ' + layerId);
   }
 }
 
