@@ -5,6 +5,7 @@ export type CardinalModel = 'human-cardinal-2015' | 'textbook-segmental';
 
 export type CardinalState =
   | 'not-yet-visible'
+  | 'present'
   | 'developing'
   | 'expanding'
   | 'persistent'
@@ -492,6 +493,7 @@ export const CARDINAL_VASCULAR_LAYERS: CardinalVascularLayer[] = [
 
 const PRESENTATION: Record<CardinalState, Omit<CardinalPresentation, 'state'>> = {
   'not-yet-visible': { statusLabel: 'Not yet represented in this stage bin', opacity: 0, radiusScale: 0, visible: false },
+  present: { statusLabel: 'Present', opacity: 0.94, radiusScale: 1, visible: true },
   developing: { statusLabel: 'Developing', opacity: 0.66, radiusScale: 0.88, visible: true },
   expanding: { statusLabel: 'Expanding', opacity: 0.86, radiusScale: 1, visible: true },
   persistent: { statusLabel: 'Persistent in this model', opacity: 0.96, radiusScale: 1.04, visible: true },
