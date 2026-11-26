@@ -412,7 +412,7 @@ function makePortalGallbladder() {
   for (let i = 0; i < positionAttribute.count; i += 1) {
     vertex.fromBufferAttribute(positionAttribute, i);
     const taper = 0.72 + 0.28 * ((vertex.y + 1) * 0.5);
-    const neck = Math.exp(-((vertex.y - 0.72) / 0.2) ** 2);
+    const neck = Math.exp(-(((vertex.y - 0.72) / 0.2) ** 2));
     positionAttribute.setXYZ(
       i,
       vertex.x * 0.14 * 0.72 * taper * (1 - 0.12 * neck),

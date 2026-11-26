@@ -106,7 +106,7 @@ They must not be blended into one invented developmental sequence. Each profile 
 
 ## Animation refinement
 
-The upgrade/animation-refinement branch adds a short crossfade for stage-specific vessel replacement, continuously moving flow-direction markers on authored paths, eased camera presets and zoom, and interpolated organ-scale changes. These are presentation transitions only: they do not interpolate anatomical centre-lines, invent intermediate vessel topology, or imply measured growth rates / blood velocity. Automated validation checks these safeguards; final browser pixel review remains a separate release gate.
+The upgrade/animation-refinement branch now targets the core anatomical scene: higher-resolution sculpted liver and embryonic landmarks, a lumen-bearing duodenum, shared-node junction blending for reticular vascular paths, bounded higher-density vessel tessellation, and a registered flow-marker animation loop. Stage-specific vessel states crossfade rather than morph into hybrid topology; authored centre-lines and evidence-specific network data remain unchanged. Visibility and selection no longer trigger full vascular geometry rebuilds. Automated checks cover these changes; final browser pixel review remains a separate release gate.
 
 ## Planned development
 
