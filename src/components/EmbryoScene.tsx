@@ -1271,7 +1271,7 @@ export default function EmbryoScene({
     const api = apiRef.current;
     if (!api) return;
     api.objects.forEach((object, id) => highlight(object, id === selectedStructure));
-  }, [selectedStructure]);
+  }, [selectedStructure, stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
