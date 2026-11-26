@@ -85,6 +85,11 @@ function disposeObject(object: THREE.Object3D) {
   });
 }
 function clearGroup(group: THREE.Group, transitionRoot: THREE.Group, fades: FadeRecord[], animate: boolean) {
+  // If the learner changes stages again mid-transition, let the current visual
+  // opacity become the starting point for the next fade instead of competing tweens.
+  for (let index = fades.length - 1; index >= 0; index -= 1) {
+    if (fades[index].object === group) fades.splice(index, 1);
+  }
   const children = [...group.children];
   const wasVisible = group.visible;
   group.clear();
