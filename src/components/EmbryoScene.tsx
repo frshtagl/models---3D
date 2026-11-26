@@ -193,47 +193,61 @@ function tube(points: THREE.Vector3[], radius: number, color: string) {
 }
 
 function makeHollowOrganTube(
-  points: readonly Point3[],
-  outerRadius: number,
-  innerRadius: number,
-  outerColor: string
+  points: readonly Point3[], outerRadius: number, innerRadius: number, outerColor: string
 ): THREE.Group {
-  const curve = new THREE.CatmullRomCurve3(
-    points.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-    false,
-    'centripetal'
-  );
-  const tubularSegments = Math.max(112, Math.min(240, Math.ceil(curve.getLength() * 28)));
-  const radialSegments = 40;
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, 'centripetal');
+  const tubularSegments = Math.max(128, Math.min(240, Math.ceil(curve.getLength() * 30)));
+  const radialSegments = 40, ringSize = radialSegments + 1;
+  const frames = curve.computeFrenetFrames(tubularSegments, false);
+  const geometry = new THREE.BufferGeometry();
+  const positions: number[] = [], colors: number[] = [], indices: number[] = [];
+  const outerTint = new THREE.Color(outerColor), innerTint = new THREE.Color('#8b6558');
+  const minorAxisScale = 0.86;
+  for (let i = 0; i <= tubularSegments; i += 1) {
+    const t = i / tubularSegments;
+    const edge = Math.min(1, Math.min(t, 1 - t) / 0.12);
+    const profile = 0.94 + 0.06 * edge * edge * (3 - 2 * edge);
+    const center = curve.getPointAt(t);
+    for (let j = 0; j <= radialSegments; j += 1) {
+      const angle = (j / radialSegments) * Math.PI * 2;
+      const radial = frames.normals[i].clone().multiplyScalar(Math.cos(angle))
+        .addScaledVector(frames.binormals[i], Math.sin(angle) * minorAxisScale);
+      const outerPoint = center.clone().addScaledVector(radial, outerRadius * profile);
+      positions.push(outerPoint.x, outerPoint.y, outerPoint.z);
+      colors.push(outerTint.r, outerTint.g, outerTint.b);
+      const innerPoint = center.clone().addScaledVector(radial, innerRadius * profile);
+      positions.push(innerPoint.x, innerPoint.y, innerPoint.z);
+      colors.push(innerTint.r, innerTint.g, innerTint.b);
+    }
+  }
+  const stride = ringSize * 2;
+  for (let i = 0; i < tubularSegments; i += 1) {
+    for (let j = 0; j < radialSegments; j += 1) {
+      const a = i * stride + j * 2, b = (i + 1) * stride + j * 2, c = b + 2, d = a + 2;
+      indices.push(a, d, b, b, d, c);
+      const ai = a + 1, bi = b + 1, ci = c + 1, di = d + 1;
+      indices.push(ai, bi, di, bi, ci, di);
+    }
+  }
+  // Annular rims connect the mucosal and outer walls without closing the lumen.
+  for (let j = 0; j < radialSegments; j += 1) {
+    const so = j * 2, si = so + 1, son = so + 2, sin = son + 1;
+    indices.push(so, si, son, son, si, sin);
+    const eo = tubularSegments * stride + j * 2, ei = eo + 1, eon = eo + 2, ein = eon + 1;
+    indices.push(eo, eon, ei, eon, ein, ei);
+  }
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
+    vertexColors: true, roughness: 0.74, metalness: 0, clearcoat: 0.055, side: THREE.DoubleSide
+  }));
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
   const group = new THREE.Group();
-
-  group.add(new THREE.Mesh(
-    new THREE.TubeGeometry(curve, tubularSegments, outerRadius, radialSegments, false),
-    new THREE.MeshPhysicalMaterial({ color: outerColor, roughness: 0.68, clearcoat: 0.1, side: THREE.DoubleSide })
-  ));
-  group.add(new THREE.Mesh(
-    new THREE.TubeGeometry(curve, tubularSegments, innerRadius, radialSegments, false),
-    new THREE.MeshPhysicalMaterial({ color: '#805c4d', roughness: 0.82, metalness: 0, side: THREE.BackSide })
-  ));
-
-  const rimGeometry = new THREE.TorusGeometry(
-    (outerRadius + innerRadius) * 0.5,
-    (outerRadius - innerRadius) * 0.5,
-    12,
-    40
-  );
-  [0, 1].forEach((t) => {
-    const rim = new THREE.Mesh(
-      rimGeometry.clone(),
-      new THREE.MeshStandardMaterial({ color: outerColor, roughness: 0.72 })
-    );
-    rim.position.copy(curve.getPointAt(t));
-    rim.quaternion.setFromUnitVectors(
-      new THREE.Vector3(0, 0, 1),
-      curve.getTangentAt(t).normalize()
-    );
-    group.add(rim);
-  });
+  group.add(mesh);
   return group;
 }
 
@@ -251,44 +265,44 @@ function viewFor(preset: CameraPreset) {
   return views[preset];
 }
 
-function makeLiver() {
-  const geometry = new THREE.SphereGeometry(1, 128, 88);
+function makeLiver(stageId: VitellineStageId) {
+  const stageForm: Record<VitellineStageId, number> = { cs10: 0.04, cs12: 0.28, cs13: 0.72, cs14: 0.9, cs15: 1, cs16: 1 };
+  const form = stageForm[stageId];
+  const geometry = new THREE.SphereGeometry(1, 144, 96);
   const position = geometry.attributes.position as THREE.BufferAttribute;
   const vertex = new THREE.Vector3();
-
   for (let i = 0; i < position.count; i += 1) {
     vertex.fromBufferAttribute(position, i);
-    const x = vertex.x;
-    const y = vertex.y;
-    const z = vertex.z;
-    const rightLobe = x >= 0 ? 1.12 : 0.78;
+    const x = vertex.x, y = vertex.y, z = vertex.z;
+    const dorsal = Math.max(0, z), ventral = Math.max(0, -z);
+    const leftWing = Math.exp(-(((x + 0.54) / 0.36) ** 2) - (((y - 0.02) / 0.62) ** 2)) * dorsal;
+    const rightWing = Math.exp(-(((x - 0.54) / 0.38) ** 2) - (((y - 0.02) / 0.64) ** 2)) * dorsal;
+    const interlobarGroove = Math.exp(-((x / 0.19) ** 2) - (((y - 0.02) / 0.66) ** 2)) * dorsal;
+    const ventromedialLobe = Math.exp(-((x / 0.42) ** 2) - (((y + 0.2) / 0.5) ** 2)) * ventral;
+    const caudalUNotch = Math.exp(-((x / 0.27) ** 2) - (((y + 0.46) / 0.2) ** 2)) * ventral;
+    const wingVolume = form * (leftWing + rightWing);
+    const rightLobe = x >= 0 ? 1.1 : 0.82;
     const inferiorNotch = Math.exp(-(((x - 0.08) / 0.18) ** 2) - (((y + 0.64) / 0.17) ** 2));
-    const portaHepatisIndent = Math.exp(-(((x - 0.02) / 0.24) ** 2) - (((y + 0.1) / 0.2) ** 2)) * Math.max(0, -z);
-    const gallbladderFossa = Math.exp(-(((x - 0.34) / 0.16) ** 2) - (((y + 0.48) / 0.24) ** 2)) * Math.max(0, -z);
-    const caudateRelief = Math.exp(-(((x - 0.38) / 0.24) ** 2) - (((y + 0.08) / 0.32) ** 2)) * Math.max(0, z);
-    const surfaceRelief = 0.012 * Math.sin(3.2 * x + 0.5) * Math.cos(2.6 * y)
-      + 0.008 * Math.sin(5.4 * y + x);
-    position.setXYZ(
-      i,
-      x * 1.58 * rightLobe + 0.055 * y,
-      y * 0.78 + inferiorNotch * 0.12 + caudateRelief * 0.035,
-      z * (0.74 + surfaceRelief) + portaHepatisIndent * 0.1 - gallbladderFossa * 0.045
-    );
+    const portaHepatisIndent = Math.exp(-(((x - 0.02) / 0.24) ** 2) - (((y + 0.1) / 0.2) ** 2)) * ventral;
+    const gallbladderFossa = Math.exp(-(((x - 0.34) / 0.16) ** 2) - (((y + 0.48) / 0.24) ** 2)) * ventral;
+    const caudateRelief = Math.exp(-(((x - 0.38) / 0.24) ** 2) - (((y + 0.08) / 0.32) ** 2)) * dorsal;
+    const surfaceRelief = 0.009 * Math.sin(3.2 * x + 0.5) * Math.cos(2.6 * y) + 0.005 * Math.sin(5.4 * y + x);
+    const primitiveTaper = 1 - (1 - form) * 0.28 * Math.max(0, -y) * (1 - Math.abs(x));
+    const xPosition = x * 1.52 * rightLobe * primitiveTaper + 0.055 * form * (rightWing - leftWing);
+    const yPosition = y * 0.76 + 0.035 * wingVolume + 0.045 * form * ventromedialLobe + inferiorNotch * 0.08 + caudateRelief * 0.025;
+    const baseDepth = 0.52 + 0.17 * form;
+    const zPosition = z * (baseDepth + surfaceRelief + 0.15 * wingVolume - 0.11 * form * interlobarGroove + 0.055 * form * ventromedialLobe)
+      + portaHepatisIndent * 0.085 - gallbladderFossa * 0.04 - 0.045 * (1 - form) * caudalUNotch;
+    position.setXYZ(i, xPosition, yPosition, zPosition);
   }
-
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
-    color: '#a96854',
-    roughness: 0.66,
-    metalness: 0,
-    clearcoat: 0.12,
-    transparent: true,
-    opacity: 0.27,
-    depthWrite: false,
-    side: THREE.DoubleSide
+    color: '#a76c58', roughness: 0.76, metalness: 0, clearcoat: 0.055,
+    transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide
   }));
   mesh.position.set(0, 1.4, 0.12);
   mesh.renderOrder = 1;
+  mesh.userData.anatomicalForm = 'stage-specific embryonic hepatic primordium';
   return mesh;
 }
 
@@ -406,33 +420,22 @@ function makeDorsalPancreaticBud() {
 
 function makePortalGallbladder() {
   const landmark = PORTAL_LANDMARKS.find((item) => item.id === 'portal-gallbladder');
-  const geometry = new THREE.SphereGeometry(1, 56, 40);
+  const geometry = new THREE.SphereGeometry(1, 64, 48);
   const positionAttribute = geometry.attributes.position as THREE.BufferAttribute;
   const vertex = new THREE.Vector3();
   for (let i = 0; i < positionAttribute.count; i += 1) {
     vertex.fromBufferAttribute(positionAttribute, i);
-    const taper = 0.72 + 0.28 * ((vertex.y + 1) * 0.5);
-    const neck = Math.exp(-(((vertex.y - 0.72) / 0.2) ** 2));
-    positionAttribute.setXYZ(
-      i,
-      vertex.x * 0.14 * 0.72 * taper * (1 - 0.12 * neck),
-      vertex.y * 0.14 * 1.48,
-      vertex.z * 0.14 * 0.72 * taper * (1 - 0.12 * neck)
-    );
+    const cranialNeck = Math.exp(-(((vertex.y - 0.76) / 0.19) ** 2));
+    const bodyBulge = 1 + 0.12 * Math.exp(-(((vertex.y + 0.12) / 0.52) ** 2));
+    const fundusToNeckTaper = 1 - 0.34 * ((vertex.y + 1) * 0.5);
+    const width = fundusToNeckTaper * bodyBulge * (1 - 0.28 * cranialNeck);
+    positionAttribute.setXYZ(i, vertex.x * 0.14 * 0.72 * width, vertex.y * 0.14 * 1.48, vertex.z * 0.14 * 0.72 * width);
   }
   geometry.computeVertexNormals();
-  const mesh = new THREE.Mesh(
-    geometry,
-    new THREE.MeshPhysicalMaterial({
-      color: landmark?.color ?? '#a6b86d',
-      roughness: 0.62,
-      clearcoat: 0.08,
-      transparent: true,
-      opacity: 0.94,
-      emissive: '#263015',
-      emissiveIntensity: 0.06
-    })
-  );
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
+    color: landmark?.color ?? '#a6b86d', roughness: 0.68, clearcoat: 0.055,
+    transparent: true, opacity: 0.92, depthWrite: false, emissive: '#263015', emissiveIntensity: 0.025
+  }));
   const landmarkPosition = landmark?.position ?? [0.05, 1.13, -0.43];
   mesh.position.set(landmarkPosition[0], landmarkPosition[1], landmarkPosition[2]);
   return mesh;
@@ -452,66 +455,45 @@ function highlight(object: THREE.Object3D, active: boolean) {
   });
 }
 
-function makeVesselMesh(
-  points: readonly Point3[],
-  radius: number,
-  color: string,
-  opacity: number
-): THREE.Mesh | null {
+interface VesselMeshOptions { capStart?: boolean; capEnd?: boolean; startTaper?: number; endTaper?: number; }
+function smooth01(value: number) { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); }
+function makeVesselMesh(points: readonly Point3[], radius: number, color: string, opacity: number, options: VesselMeshOptions = {}): THREE.Mesh | null {
   if (points.length < 2 || radius <= 0) return null;
-  const curvePoints = points.map(([x, y, z]) => new THREE.Vector3(x, y, z));
-  const curve = new THREE.CatmullRomCurve3(curvePoints, false, VESSEL_RENDER_CONFIG.curveType);
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, VESSEL_RENDER_CONFIG.curveType);
   const length = curve.getLength();
-  const tubularSegments = Math.max(
-    VESSEL_RENDER_CONFIG.minTubularSegments,
-    Math.min(VESSEL_RENDER_CONFIG.maxTubularSegments, Math.ceil(length * VESSEL_RENDER_CONFIG.samplesPerUnit))
-  );
-  const radialSegments = VESSEL_RENDER_CONFIG.radialSegments;
+  const tubularSegments = Math.max(VESSEL_RENDER_CONFIG.minTubularSegments, Math.min(VESSEL_RENDER_CONFIG.maxTubularSegments, Math.ceil(length * VESSEL_RENDER_CONFIG.samplesPerUnit)));
+  const radialSegments = VESSEL_RENDER_CONFIG.radialSegments, minorAxisScale = VESSEL_RENDER_CONFIG.minorAxisScale;
   const frames = curve.computeFrenetFrames(tubularSegments, false);
-  const positions: number[] = [];
-  const normals: number[] = [];
-  const uvs: number[] = [];
-  const indices: number[] = [];
-
+  const positions: number[] = [], normals: number[] = [], uvs: number[] = [], indices: number[] = [];
+  const startTaper = options.startTaper ?? 1, endTaper = options.endTaper ?? 1;
+  const capStart = options.capStart ?? true, capEnd = options.capEnd ?? true;
   for (let i = 0; i <= tubularSegments; i += 1) {
-    const t = i / tubularSegments;
-    const point = curve.getPointAt(t);
+    const t = i / tubularSegments, point = curve.getPointAt(t);
     const edgeFraction = Math.min(1, Math.min(t, 1 - t) / 0.12);
     const easedEdge = edgeFraction * edgeFraction * (3 - 2 * edgeFraction);
-    const endpointScale = VESSEL_RENDER_CONFIG.endpointRadiusScale
-      + (1 - VESSEL_RENDER_CONFIG.endpointRadiusScale) * easedEdge;
+    const endpointScale = VESSEL_RENDER_CONFIG.endpointRadiusScale + (1 - VESSEL_RENDER_CONFIG.endpointRadiusScale) * easedEdge;
+    const startProfile = startTaper + (1 - startTaper) * smooth01(t / 0.14);
+    const endProfile = endTaper + (1 - endTaper) * smooth01((1 - t) / 0.14);
     const midBulge = 1 + VESSEL_RENDER_CONFIG.midRadiusBoost * Math.sin(Math.PI * t) ** 2;
-    const localRadius = radius * endpointScale * midBulge;
-
+    const localRadius = radius * endpointScale * startProfile * endProfile * midBulge;
     for (let j = 0; j <= radialSegments; j += 1) {
-      const v = j / radialSegments;
-      const angle = v * Math.PI * 2;
-      const normal = frames.normals[i].clone().multiplyScalar(Math.cos(angle))
-        .addScaledVector(frames.binormals[i], Math.sin(angle)).normalize();
-      const vertex = point.clone().addScaledVector(normal, localRadius);
-      positions.push(vertex.x, vertex.y, vertex.z);
-      normals.push(normal.x, normal.y, normal.z);
-      uvs.push(t, v);
+      const v = j / radialSegments, angle = v * Math.PI * 2;
+      const cosine = Math.cos(angle), sine = Math.sin(angle);
+      const radial = frames.normals[i].clone().multiplyScalar(cosine).addScaledVector(frames.binormals[i], sine * minorAxisScale);
+      const vertex = point.clone().addScaledVector(radial, localRadius);
+      const normal = frames.normals[i].clone().multiplyScalar(cosine).addScaledVector(frames.binormals[i], sine / minorAxisScale).normalize();
+      positions.push(vertex.x, vertex.y, vertex.z); normals.push(normal.x, normal.y, normal.z); uvs.push(t, v);
     }
   }
-
-  for (let i = 0; i < tubularSegments; i += 1) {
-    for (let j = 0; j < radialSegments; j += 1) {
-      const a = i * (radialSegments + 1) + j;
-      const b = (i + 1) * (radialSegments + 1) + j;
-      const c = b + 1;
-      const d = a + 1;
-      indices.push(a, b, d, b, c, d);
-    }
+  for (let i = 0; i < tubularSegments; i += 1) for (let j = 0; j < radialSegments; j += 1) {
+    const a = i * (radialSegments + 1) + j, b = (i + 1) * (radialSegments + 1) + j, c = b + 1, d = a + 1;
+    indices.push(a, b, d, b, c, d);
   }
-
-  // Rounded end caps close open tube ends and soften connected graph junctions.
-  const addCap = (center: THREE.Vector3) => {
-    const cap = new THREE.SphereGeometry(radius * VESSEL_RENDER_CONFIG.endpointRadiusScale, radialSegments, 16);
-    cap.translate(center.x, center.y, center.z);
-    const capPositions = cap.attributes.position as THREE.BufferAttribute;
-    const capNormals = cap.attributes.normal as THREE.BufferAttribute;
-    const capUvs = cap.attributes.uv as THREE.BufferAttribute;
+  const appendHemisphere = (center: THREE.Vector3, outward: THREE.Vector3, capRadius: number) => {
+    const cap = new THREE.SphereGeometry(capRadius, radialSegments, Math.max(12, Math.floor(radialSegments / 2)), 0, Math.PI * 2, 0, Math.PI / 2);
+    const orientation = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), outward.clone().normalize());
+    cap.applyMatrix4(new THREE.Matrix4().compose(center, orientation, new THREE.Vector3(1, 1, 1)));
+    const capPositions = cap.attributes.position as THREE.BufferAttribute, capNormals = cap.attributes.normal as THREE.BufferAttribute, capUvs = cap.attributes.uv as THREE.BufferAttribute;
     const offset = positions.length / 3;
     for (let i = 0; i < capPositions.count; i += 1) {
       positions.push(capPositions.getX(i), capPositions.getY(i), capPositions.getZ(i));
@@ -519,119 +501,93 @@ function makeVesselMesh(
       uvs.push(capUvs.getX(i), capUvs.getY(i));
     }
     const capIndices = cap.index?.array;
-    if (capIndices) {
-      for (let i = 0; i < capIndices.length; i += 1) indices.push(capIndices[i] + offset);
-    }
+    if (capIndices) for (let i = 0; i < capIndices.length; i += 1) indices.push(capIndices[i] + offset);
     cap.dispose();
   };
-  addCap(curve.getPointAt(0));
-  addCap(curve.getPointAt(1));
-
+  const startRadius = radius * VESSEL_RENDER_CONFIG.endpointRadiusScale * startTaper, endRadius = radius * VESSEL_RENDER_CONFIG.endpointRadiusScale * endTaper;
+  if (capStart) appendHemisphere(curve.getPointAt(0), curve.getTangentAt(0).negate(), startRadius);
+  if (capEnd) appendHemisphere(curve.getPointAt(1), curve.getTangentAt(1), endRadius);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeBoundingSphere();
-
   const material = new THREE.MeshPhysicalMaterial({
-    color,
-    roughness: VESSEL_RENDER_CONFIG.roughness,
-    metalness: 0.015,
-    clearcoat: VESSEL_RENDER_CONFIG.clearcoat,
-    clearcoatRoughness: VESSEL_RENDER_CONFIG.clearcoatRoughness,
-    transparent: opacity < 0.98,
-    opacity,
-    depthWrite: opacity >= 0.98,
-    emissive: color,
-    emissiveIntensity: VESSEL_RENDER_CONFIG.emissiveIntensity
+    color, roughness: VESSEL_RENDER_CONFIG.roughness, metalness: 0.008, clearcoat: VESSEL_RENDER_CONFIG.clearcoat,
+    clearcoatRoughness: VESSEL_RENDER_CONFIG.clearcoatRoughness, transparent: opacity < 0.98, opacity,
+    depthWrite: opacity >= 0.98, emissive: color, emissiveIntensity: VESSEL_RENDER_CONFIG.emissiveIntensity
   });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
+  mesh.castShadow = false; mesh.receiveShadow = false;
   return mesh;
 }
 
 function makeFlowArrow(points: readonly Point3[], color: string, radius: number): THREE.Mesh | null {
   if (points.length < 2) return null;
-  const curve = new THREE.CatmullRomCurve3(
-    points.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-    false,
-    VESSEL_RENDER_CONFIG.curveType
-  );
-  const position = curve.getPointAt(0.72);
-  const direction = curve.getTangentAt(0.72).normalize();
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, VESSEL_RENDER_CONFIG.curveType);
+  const position = curve.getPointAt(0.72), direction = curve.getTangentAt(0.72).normalize();
   if (direction.lengthSq() < 1e-8) return null;
-  const height = Math.max(radius * 2.5, 0.065);
-  const arrow = new THREE.Mesh(
-    new THREE.ConeGeometry(Math.max(radius * 1.35, 0.022), height, 16, 1),
-    new THREE.MeshPhysicalMaterial({
-      color,
-      roughness: 0.34,
-      metalness: 0.01,
-      clearcoat: 0.24,
-      emissive: color,
-      emissiveIntensity: 0.08
-    })
-  );
-  arrow.position.copy(position).addScaledVector(direction, height * 0.12);
+  const height = Math.max(radius * 1.9, 0.04);
+  const arrow = new THREE.Mesh(new THREE.ConeGeometry(Math.max(radius * 0.95, 0.016), height, 12, 1),
+    new THREE.MeshPhysicalMaterial({ color, roughness: 0.52, metalness: 0, clearcoat: 0.08, emissive: color, emissiveIntensity: 0.025 }));
+  arrow.position.copy(position).addScaledVector(direction, height * 0.1);
   arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-  arrow.userData.flowCurve = curve;
-  arrow.userData.flowSpeed = 0.11;
+  arrow.userData.flowCurve = curve; arrow.userData.flowSpeed = 0.11;
   arrow.userData.flowOffset = (Math.abs(points[0][0]) * 0.173 + points.length * 0.071) % 1;
   return arrow;
 }
 
-interface JunctionPath {
-  fromNode: string;
-  toNode: string;
-  points: readonly Point3[];
-  radiusScale?: number;
-}
-
-function addVascularJunctions(
-  group: THREE.Group,
-  paths: readonly JunctionPath[],
-  baseRadius: number,
-  color: string,
-  opacity: number
-) {
-  const junctions = new Map<string, { position: Point3; degree: number; radiusScale: number }>();
+interface JunctionPath { fromNode: string; toNode: string; points: readonly Point3[]; radiusScale?: number; }
+interface JunctionRecord { position: Point3; degree: number; radiusScale: number; }
+function collectVascularJunctions(paths: readonly JunctionPath[]) {
+  const junctions = new Map<string, JunctionRecord>();
   paths.forEach((path) => {
     if (path.points.length < 2) return;
-    const endpoints: [string, Point3][] = [
-      [path.fromNode, path.points[0]],
-      [path.toNode, path.points[path.points.length - 1]]
-    ];
+    const endpoints: [string, Point3][] = [[path.fromNode, path.points[0]], [path.toNode, path.points[path.points.length - 1]]];
     endpoints.forEach(([nodeId, position]) => {
       const current = junctions.get(nodeId);
-      if (current) {
-        current.degree += 1;
-        current.radiusScale = Math.max(current.radiusScale, path.radiusScale ?? 1);
-      } else {
-        junctions.set(nodeId, { position, degree: 1, radiusScale: path.radiusScale ?? 1 });
-      }
+      if (current) { current.degree += 1; current.radiusScale = Math.max(current.radiusScale, path.radiusScale ?? 1); }
+      else junctions.set(nodeId, { position, degree: 1, radiusScale: path.radiusScale ?? 1 });
     });
   });
-
+  return junctions;
+}
+function vesselMeshOptions(path: JunctionPath, junctions: Map<string, JunctionRecord>): VesselMeshOptions {
+  const startDegree = junctions.get(path.fromNode)?.degree ?? 1, endDegree = junctions.get(path.toNode)?.degree ?? 1;
+  const taperFor = (degree: number) => degree >= 3 ? 0.84 : degree === 2 ? 0.95 : 1;
+  return { capStart: startDegree === 1, capEnd: endDegree === 1, startTaper: taperFor(startDegree), endTaper: taperFor(endDegree) };
+}
+function sameCentreline(a: readonly Point3[], b: readonly Point3[]) {
+  return a.length === b.length && a.every((point, index) =>
+    Math.abs(point[0] - b[index][0]) < 1e-6 && Math.abs(point[1] - b[index][1]) < 1e-6 && Math.abs(point[2] - b[index][2]) < 1e-6
+  );
+}
+function collectActiveJunctions(stageId: VitellineStageId, profile: EvidenceProfile, cardinalModel: CardinalModel) {
+  const activePaths: JunctionPath[] = [];
+  VITELLINE_SEGMENTS.forEach((segment) => {
+    const p = getVesselPresentation(segment, profile, stageId);
+    if (p.visible && p.paths.length === 1 && sameCentreline(p.paths[0], segment.points)) activePaths.push(segment);
+  });
+  HEPATIC_VASCULAR_LAYERS.forEach((layer) => { if (getHepaticLayerPresentation(layer, profile, stageId).visible) activePaths.push(...layer.paths); });
+  HEPATIC_OUTFLOW_LAYERS.forEach((layer) => { if (getHepaticOutflowPresentation(layer, profile, stageId).visible) activePaths.push(...layer.paths); });
+  INTERVITELLINE_ANASTOMOSES.forEach((item) => { if (getIntervitellinePresentation(item, profile, stageId).visible) activePaths.push(item); });
+  PORTAL_VASCULAR_LAYERS.forEach((layer) => { if (getPortalLayerPresentation(layer, profile, stageId).visible) activePaths.push(...layer.paths); });
+  UMBILICAL_VASCULAR_LAYERS.forEach((layer) => { if (getUmbilicalLayerPresentation(layer, profile, stageId).visible) activePaths.push(...layer.paths); });
+  CARDINAL_VASCULAR_LAYERS.forEach((layer) => { if (getCardinalLayerPresentation(layer, cardinalModel, stageId).visible) activePaths.push(...layer.paths); });
+  return collectVascularJunctions(activePaths);
+}
+function addVascularJunctions(group: THREE.Group, paths: readonly JunctionPath[], baseRadius: number, color: string, opacity: number) {
+  const junctions = collectVascularJunctions(paths);
   junctions.forEach((junction, nodeId) => {
     if (junction.degree < 3) return;
-    const radius = baseRadius * Math.min(1.3, junction.radiusScale) * 1.06;
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(radius, 20, 14),
-      new THREE.MeshPhysicalMaterial({
-        color,
-        roughness: VESSEL_RENDER_CONFIG.roughness,
-        metalness: 0.015,
-        clearcoat: VESSEL_RENDER_CONFIG.clearcoat,
-        clearcoatRoughness: VESSEL_RENDER_CONFIG.clearcoatRoughness,
-        transparent: opacity < 0.98,
-        opacity,
-        depthWrite: opacity >= 0.98,
-        emissive: color,
-        emissiveIntensity: VESSEL_RENDER_CONFIG.emissiveIntensity
-      })
-    );
+    const radius = baseRadius * Math.min(1.2, junction.radiusScale) * 0.78;
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 24, 16), new THREE.MeshPhysicalMaterial({
+      color, roughness: VESSEL_RENDER_CONFIG.roughness, metalness: 0.008,
+      clearcoat: VESSEL_RENDER_CONFIG.clearcoat, clearcoatRoughness: VESSEL_RENDER_CONFIG.clearcoatRoughness,
+      transparent: opacity < 0.98, opacity, depthWrite: opacity >= 0.98,
+      emissive: color, emissiveIntensity: VESSEL_RENDER_CONFIG.emissiveIntensity
+    }));
     mesh.position.set(junction.position[0], junction.position[1], junction.position[2]);
     mesh.userData.structureId = group.userData.structureId ?? group.name;
     mesh.userData.junctionNodeId = nodeId;
@@ -702,7 +658,10 @@ export default function EmbryoScene({
     };
 
     add('embryo-envelope', makeEmbryoEnvelope());
-    add('liver', makeLiver());
+    const liverGroup = new THREE.Group();
+    liverGroup.userData.geometryStage = stage.id;
+    liverGroup.add(makeLiver(stage.id as VitellineStageId));
+    add('liver', liverGroup);
 
     add('duodenum', makeHollowOrganTube([
       [-0.82, 0.94, -0.18],
@@ -713,7 +672,7 @@ export default function EmbryoScene({
       [0.7, -0.78, 0.1],
       [0.25, -1.02, 0.04],
       [-0.22, -0.91, -0.02]
-    ], 0.145, 0.082, '#dcae7a'));
+    ], 0.135, 0.103, '#dcae7a'));
 
     add('dorsal-pancreatic-bud', makeDorsalPancreaticBud());
     add('portal-gallbladder', makePortalGallbladder());
@@ -1003,6 +962,7 @@ export default function EmbryoScene({
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     VITELLINE_SEGMENTS.forEach((segment) => {
       const group = api.objects.get(segment.id) as THREE.Group | undefined;
       if (!group) return;
@@ -1012,24 +972,22 @@ export default function EmbryoScene({
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       presentation.paths.forEach((path) => {
-        const mesh = makeVesselMesh(
-          path,
-          segment.radius * presentation.radiusScale,
-          segment.color,
-          presentation.opacity
-        );
+        const originalPath = presentation.paths.length === 1 && sameCentreline(path, segment.points);
+        const mesh = makeVesselMesh(path, segment.radius * presentation.radiusScale, segment.color, presentation.opacity,
+          originalPath ? vesselMeshOptions(segment, activeJunctions) : undefined);
         if (!mesh) return;
         mesh.userData.structureId = segment.id;
         group.add(mesh);
       });
       // Selection highlighting is handled separately; do not rebuild geometry for a selection change.
     });
-  }, [stage.id, profile]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
@@ -1038,26 +996,27 @@ export default function EmbryoScene({
       group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
+      const layerRadiusScale = layer.kind === 'sinusoid' ? 0.78 : 1;
+      const layerOpacity = layer.kind === 'sinusoid' ? presentation.opacity * 0.84 : presentation.opacity;
       layer.paths.forEach((pathItem) => {
         const mesh = makeVesselMesh(
-          pathItem.points,
-          layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1),
-          layer.color,
-          presentation.opacity
+          pathItem.points, layer.radius * presentation.radiusScale * layerRadiusScale * (pathItem.radiusScale ?? 1),
+          layer.color, layerOpacity, vesselMeshOptions(pathItem, activeJunctions)
         );
         if (!mesh) return;
         mesh.userData.structureId = layer.id;
         mesh.userData.pathId = pathItem.id;
         group.add(mesh);
       });
-      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale * layerRadiusScale, layer.color, layerOpacity);
     });
-  }, [stage.id, profile]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     HEPATIC_OUTFLOW_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
@@ -1068,7 +1027,8 @@ export default function EmbryoScene({
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
         const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
-        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity,
+          vesselMeshOptions(pathItem, activeJunctions));
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
@@ -1086,12 +1046,13 @@ export default function EmbryoScene({
       });
       addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage.id, profile]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     INTERVITELLINE_ANASTOMOSES.forEach((item) => {
       const group = api.objects.get(item.id) as THREE.Group | undefined;
       if (!group) return;
@@ -1104,7 +1065,8 @@ export default function EmbryoScene({
         item.points,
         item.radius * presentation.radiusScale,
         item.color,
-        presentation.opacity
+        presentation.opacity,
+        vesselMeshOptions(item, activeJunctions)
       );
       if (mesh) {
         mesh.userData.structureId = item.id;
@@ -1113,12 +1075,13 @@ export default function EmbryoScene({
       }
       // Selection highlighting is handled separately; do not rebuild geometry for a selection change.
     });
-  }, [stage.id, profile]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     PORTAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
@@ -1128,12 +1091,8 @@ export default function EmbryoScene({
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
-        const mesh = makeVesselMesh(
-          pathItem.points,
-          layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1),
-          layer.color,
-          presentation.opacity
-        );
+        const mesh = makeVesselMesh(pathItem.points, layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1),
+          layer.color, presentation.opacity, vesselMeshOptions(pathItem, activeJunctions));
         if (!mesh) return;
         mesh.userData.structureId = layer.id;
         mesh.userData.pathId = pathItem.id;
@@ -1141,12 +1100,13 @@ export default function EmbryoScene({
       });
       addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage.id, profile]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
@@ -1157,7 +1117,8 @@ export default function EmbryoScene({
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
         const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
-        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity,
+          vesselMeshOptions(pathItem, activeJunctions));
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
@@ -1181,6 +1142,7 @@ export default function EmbryoScene({
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
@@ -1191,7 +1153,8 @@ export default function EmbryoScene({
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
         const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
-        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity,
+          vesselMeshOptions(pathItem, activeJunctions));
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
@@ -1209,7 +1172,7 @@ export default function EmbryoScene({
       });
       addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage.id, cardinalModel]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     stageChangePendingRef.current = false;
@@ -1251,7 +1214,12 @@ export default function EmbryoScene({
       const object = api.objects.get(id);
       if (object) object.visible = (visibleLayers[id] ?? true) && mesonephrosVisible;
     }
-    const liver = api.objects.get('liver');
+    const liver = api.objects.get('liver') as THREE.Group | undefined;
+    if (liver && liver.userData.geometryStage !== stage.id) {
+      clearGroup(liver, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
+      liver.add(makeLiver(stageId));
+      liver.userData.geometryStage = stage.id;
+    }
     if (liver) liver.userData.targetScale = stage.liverScale;
     const duodenum = api.objects.get('duodenum');
     if (duodenum) duodenum.userData.targetScale = stage.duodenumScale;

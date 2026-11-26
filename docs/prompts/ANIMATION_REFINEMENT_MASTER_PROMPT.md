@@ -15,6 +15,22 @@ Upgrade the actual anatomical 3D diagrams and developmental animations in `frsht
 7. Flow markers communicate direction only. Never imply measured blood velocity, pressure or pulsatility.
 8. Never call a visual result verified without browser inspection and saved evidence.
 
+## Source-backed morphology targets
+Use published human reconstructions as shape and topographic references, not as images to copy. Primary references:
+- Hikspoors et al. 2017, human vitelline / umbilical vein and liver reconstruction: https://pmc.ncbi.nlm.nih.gov/articles/PMC5643923/
+- Isotani et al. 2024, regional morphology of the umbilical vein / venous duct route: https://anatomypubs.onlinelibrary.wiley.com/doi/10.1002/ar.25421
+- HDBR Atlas Carnegie Stage 15 interactive reconstruction: https://hdbratlas.org/hikspoors-pdf/JH_CS15.html
+
+Morphology to preserve:
+1. CS10–CS11: a small triangular / folded hepatic primordium, not a scaled adult liver.
+2. CS12–CS13: the hepatic bud expands into the transverse septum; dorsolateral wings begin to enclose the vitelline conduits.
+3. CS13–early CS14: the right and left vitelline conduits remain identifiable, bend dorsally within the hepatic region, and the right is wider in the 2017 human reconstruction.
+4. CS14 onward: the ventromedial hepatic region and umbilical inflow are distinguishable; the gallbladder is a midline landmark, not a large adult gallbladder.
+5. The dorsal pancreatic bud is identifiable from CS13. The ventral pancreatic bud and gallbladder remain part of the caudal liver-bud region until late CS14; do not show them as fully mature separate organs in earlier stages.
+6. Keep the portal sinus (left umbilical-to-right vitelline shunt) separate from the venous duct (left umbilical-to-right hepatocardiac channel).
+7. At CS15, the venous route has bends and regional narrowing; use modestly oval, gently tapered vessel cross-sections rather than identical rigid cylinders.
+8. The hepatic sinusoidal plexus is a fine irregular reticular network, visually subordinate to the larger conduits. Existing paths are schematic; do not present them as specimen-derived capillaries.
+
 ## Core model work order
 
 ### 1. Vessel surfaces — highest priority

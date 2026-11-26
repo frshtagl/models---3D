@@ -22,12 +22,22 @@ assert.match(scene, /Math\.exp\(-6 \* delta\)/);
 assert.match(app, /},\s*3200\);/);
 
 // Core anatomical geometry: actual 3D surfaces, a lumen-bearing duodenum and shared-node junctions.
-assert.match(scene, /SphereGeometry\(1, 128, 88\)/);
+assert.match(scene, /function makeLiver\(stageId: VitellineStageId\)/);
+assert.match(scene, /SphereGeometry\(1, 144, 96\)/);
+assert.match(scene, /const leftWing =/);
+assert.match(scene, /const rightWing =/);
+assert.match(scene, /liver\.userData\.geometryStage !== stage\.id/);
 assert.match(scene, /function makeHollowOrganTube/);
 assert.match(scene, /TubeGeometry\(curve, tubularSegments, innerRadius, radialSegments, false\)/);
 assert.match(scene, /side: THREE\.BackSide/);
 assert.match(scene, /function addVascularJunctions/);
 assert.match(scene, /junction\.degree < 3/);
+assert.match(scene, /function collectActiveJunctions/);
+assert.match(scene, /capStart: startDegree === 1/);
+assert.match(scene, /capEnd: endDegree === 1/);
+assert.match(scene, /const appendHemisphere =/);
+assert.match(scene, /layer\.kind === 'sinusoid'/);
+assert.doesNotMatch(scene, /new THREE\.SphereGeometry\(radius \* VESSEL_RENDER_CONFIG\.endpointRadiusScale/);
 assert.equal((scene.match(/addVascularJunctions\(group, layer\.paths/g) || []).length, 5);
 assert.match(scene, /function makeDorsalPancreaticBud/);
 assert.match(scene, /function makePortalGallbladder/);
@@ -35,7 +45,7 @@ assert.match(scene, /function makePortalGallbladder/);
 // Selection and visibility must not regenerate high-poly vascular meshes.
 assert.doesNotMatch(scene, /\}, \[stage, profile, visibleLayers, selectedStructure\]\);/);
 assert.doesNotMatch(scene, /scene\.traverse\(\(object\) => \{\s*const mesh = object as THREE\.Mesh;\s*const curve = mesh\.userData\.flowCurve/);
-assert.match(scene, /\}, \[stage\.id, profile\]\);/);
+assert.match(scene, /\}, \[stage\.id, profile, cardinalModel\]\);/
 assert.match(scene, /group\.visible = presentation\.visible/);
 assert.match(config, /samplesPerUnit: 24/);
 assert.match(config, /endpointRadiusScale: 0\.9/);
@@ -56,4 +66,4 @@ for (const path of authoredGeometryFiles) {
   assert.ok(content.length > 1000, 'Authored anatomy geometry must remain present: ' + path);
 }
 
-console.log('Core anatomy checks passed: sculpted organs, hollow duodenum, branch junctions, vessel tessellation, registered animation, and non-rebuilding visibility / selection.');
+console.log('Core anatomy checks passed: stage-specific hepatic primordium, annular duodenal wall, fine sinusoidal plexus, oval vessel surfaces, hemispherical terminals, shared-node continuity, and registered animation.');
