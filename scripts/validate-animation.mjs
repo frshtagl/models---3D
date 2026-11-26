@@ -11,6 +11,7 @@ assert.match(scene, /function updateFadeTransitions/);
 assert.match(scene, /function beginFadeIn/);
 assert.match(scene, /stageChangePendingRef/);
 assert.match(scene, /function startCameraTween/);
+assert.match(scene, /fromOffset\.normalize\(\)\.slerp\(toOffset\.normalize\(\), eased\)/);
 assert.match(scene, /userData\.flowCurve\s*=\s*curve/);
 assert.match(scene, /curve\.getPointAt\(progress\)/);
 assert.match(scene, /userData\.targetScale\s*=\s*stage\.liverScale/);

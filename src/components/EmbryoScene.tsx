@@ -739,8 +739,15 @@ export default function EmbryoScene({
           const tween = api.cameraTween;
           const progress = Math.min(1, Math.max(0, (now - tween.startedAt) / tween.duration));
           const eased = progress * progress * (3 - 2 * progress);
-          camera.position.copy(tween.fromPosition).lerp(tween.toPosition, eased);
-          controls.target.copy(tween.fromTarget).lerp(tween.toTarget, eased);
+          const target = tween.fromTarget.clone().lerp(tween.toTarget, eased);
+          const fromOffset = tween.fromPosition.clone().sub(tween.fromTarget);
+          const toOffset = tween.toPosition.clone().sub(tween.toTarget);
+          const fromRadius = fromOffset.length();
+          const toRadius = toOffset.length();
+          const direction = fromOffset.normalize().slerp(toOffset.normalize(), eased).normalize();
+          const radius = fromRadius + (toRadius - fromRadius) * eased;
+          controls.target.copy(target);
+          camera.position.copy(target).addScaledVector(direction, radius);
           camera.up.copy(tween.fromUp).lerp(tween.toUp, eased).normalize();
           if (progress >= 1) {
             camera.position.copy(tween.toPosition);
