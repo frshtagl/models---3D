@@ -46,8 +46,8 @@ interface CameraTween {
   toPosition: THREE.Vector3;
   fromTarget: THREE.Vector3;
   toTarget: THREE.Vector3;
-  fromUp: THREE.Vector3;
-  toUp: THREE.Vector3;
+  fromQuaternion: THREE.Quaternion;
+  toQuaternion: THREE.Quaternion;
   startedAt: number;
   duration: number;
 }
@@ -150,10 +150,14 @@ function updateFadeTransitions(fades: FadeRecord[], transitionRoot: THREE.Group,
   }
 }
 function startCameraTween(api: SceneApi, position: THREE.Vector3, target: THREE.Vector3, up: THREE.Vector3, duration = CAMERA_TRANSITION_DURATION_MS) {
+  const targetCamera = new THREE.PerspectiveCamera();
+  targetCamera.position.copy(position);
+  targetCamera.up.copy(up);
+  targetCamera.lookAt(target);
   api.cameraTween = {
     fromPosition: api.camera.position.clone(), toPosition: position.clone(),
     fromTarget: api.controls.target.clone(), toTarget: target.clone(),
-    fromUp: api.camera.up.clone(), toUp: up.clone(),
+    fromQuaternion: api.camera.quaternion.clone(), toQuaternion: targetCamera.quaternion.clone(),
     startedAt: performance.now(), duration
   };
 }
@@ -744,15 +748,22 @@ export default function EmbryoScene({
           const toOffset = tween.toPosition.clone().sub(tween.toTarget);
           const fromRadius = fromOffset.length();
           const toRadius = toOffset.length();
-          const direction = fromOffset.normalize().slerp(toOffset.normalize(), eased).normalize();
+          const fromDirection = fromOffset.normalize();
+          const toDirection = toOffset.normalize();
+          const rotation = new THREE.Quaternion().setFromUnitVectors(fromDirection, toDirection);
+          const direction = fromDirection.clone()
+            .applyQuaternion(new THREE.Quaternion().identity().slerp(rotation, eased))
+            .normalize();
           const radius = fromRadius + (toRadius - fromRadius) * eased;
           controls.target.copy(target);
           camera.position.copy(target).addScaledVector(direction, radius);
-          camera.up.copy(tween.fromUp).lerp(tween.toUp, eased).normalize();
+          camera.quaternion.copy(tween.fromQuaternion).slerp(tween.toQuaternion, eased);
+          camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
           if (progress >= 1) {
             camera.position.copy(tween.toPosition);
             controls.target.copy(tween.toTarget);
-            camera.up.copy(tween.toUp);
+            camera.quaternion.copy(tween.toQuaternion);
+            camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
             api.cameraTween = null;
           }
         }
