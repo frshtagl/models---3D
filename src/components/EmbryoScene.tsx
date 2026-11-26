@@ -28,10 +28,129 @@ interface Props {
   onSelectStructure: (id: string) => void;
 }
 
+interface MaterialFadeState {
+  material: THREE.Material;
+  opacity: number;
+  transparent: boolean;
+  depthWrite: boolean;
+}
+interface FadeRecord {
+  object: THREE.Object3D;
+  startedAt: number;
+  duration: number;
+  direction: 'in' | 'out';
+  materials: MaterialFadeState[];
+}
+interface CameraTween {
+  fromPosition: THREE.Vector3;
+  toPosition: THREE.Vector3;
+  fromTarget: THREE.Vector3;
+  toTarget: THREE.Vector3;
+  fromUp: THREE.Vector3;
+  toUp: THREE.Vector3;
+  startedAt: number;
+  duration: number;
+}
 interface SceneApi {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   objects: Map<string, THREE.Object3D>;
+  transitionRoot: THREE.Group;
+  fades: FadeRecord[];
+  cameraTween: CameraTween | null;
+  clock: THREE.Clock;
+}
+const STAGE_TRANSITION_DURATION_MS = 720;
+const CAMERA_TRANSITION_DURATION_MS = 760;
+
+function collectMaterialFadeStates(object: THREE.Object3D): MaterialFadeState[] {
+  const states: MaterialFadeState[] = [];
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => states.push({
+      material, opacity: material.opacity, transparent: material.transparent, depthWrite: material.depthWrite
+    }));
+  });
+  return states;
+}
+function disposeObject(object: THREE.Object3D) {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry?.dispose();
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => material.dispose());
+  });
+}
+function clearGroup(group: THREE.Group, transitionRoot: THREE.Group, fades: FadeRecord[], animate: boolean) {
+  const children = [...group.children];
+  const wasVisible = group.visible;
+  group.clear();
+  if (animate) {
+    if (children.length) {
+      const outgoing = new THREE.Group();
+      outgoing.name = `${group.name}-outgoing`;
+      outgoing.visible = wasVisible;
+      children.forEach((child) => outgoing.add(child));
+      transitionRoot.add(outgoing);
+      const materials = collectMaterialFadeStates(outgoing);
+      materials.forEach(({ material }) => {
+        material.transparent = true;
+        material.depthWrite = false;
+        material.needsUpdate = true;
+      });
+      fades.push({ object: outgoing, startedAt: performance.now(), duration: STAGE_TRANSITION_DURATION_MS, direction: 'out', materials });
+    }
+    group.userData.pendingFadeIn = true;
+    return;
+  }
+  group.userData.pendingFadeIn = false;
+  children.forEach(disposeObject);
+}
+function beginFadeIn(group: THREE.Object3D, fades: FadeRecord[], now: number) {
+  if (!group.userData.pendingFadeIn) return;
+  group.userData.pendingFadeIn = false;
+  const materials = collectMaterialFadeStates(group);
+  if (!materials.length) return;
+  materials.forEach(({ material }) => {
+    material.transparent = true;
+    material.depthWrite = false;
+    material.opacity = 0;
+    material.needsUpdate = true;
+  });
+  fades.push({ object: group, startedAt: now, duration: STAGE_TRANSITION_DURATION_MS, direction: 'in', materials });
+}
+function updateFadeTransitions(fades: FadeRecord[], transitionRoot: THREE.Group, now: number) {
+  for (let index = fades.length - 1; index >= 0; index -= 1) {
+    const fade = fades[index];
+    const progress = Math.min(1, Math.max(0, (now - fade.startedAt) / fade.duration));
+    const eased = progress * progress * (3 - 2 * progress);
+    const scale = fade.direction === 'in' ? eased : 1 - eased;
+    fade.materials.forEach((state) => { state.material.opacity = state.opacity * scale; });
+    if (progress < 1) continue;
+    if (fade.direction === 'in') {
+      fade.materials.forEach((state) => {
+        state.material.opacity = state.opacity;
+        state.material.transparent = state.transparent;
+        state.material.depthWrite = state.depthWrite;
+        state.material.needsUpdate = true;
+      });
+    } else {
+      transitionRoot.remove(fade.object);
+      disposeObject(fade.object);
+    }
+    fades.splice(index, 1);
+  }
+}
+function startCameraTween(api: SceneApi, position: THREE.Vector3, target: THREE.Vector3, up: THREE.Vector3, duration = CAMERA_TRANSITION_DURATION_MS) {
+  api.cameraTween = {
+    fromPosition: api.camera.position.clone(), toPosition: position.clone(),
+    fromTarget: api.controls.target.clone(), toTarget: target.clone(),
+    fromUp: api.camera.up.clone(), toUp: up.clone(),
+    startedAt: performance.now(), duration
+  };
 }
 
 function tube(points: THREE.Vector3[], radius: number, color: string) {
@@ -349,22 +468,10 @@ function makeFlowArrow(points: readonly Point3[], color: string, radius: number)
   );
   arrow.position.copy(position).addScaledVector(direction, height * 0.12);
   arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+  arrow.userData.flowCurve = curve;
+  arrow.userData.flowSpeed = 0.11;
+  arrow.userData.flowOffset = (Math.abs(points[0][0]) * 0.173 + points.length * 0.071) % 1;
   return arrow;
-}
-
-function clearGroup(group: THREE.Group) {
-  const children = [...group.children];
-  group.clear();
-  children.forEach((child) => {
-    child.traverse((object) => {
-      const mesh = object as THREE.Mesh;
-      if (mesh.geometry) mesh.geometry.dispose();
-      if (mesh.material) {
-        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        materials.forEach((material) => material.dispose());
-      }
-    });
-  });
 }
 
 export default function EmbryoScene({
@@ -373,6 +480,8 @@ export default function EmbryoScene({
   const mountRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const zoomStepRef = useRef(0);
+  const stageChangePendingRef = useRef(false);
+  const previousStageKeyRef = useRef<string | null>(null);
   const selectRef = useRef(onSelectStructure);
   selectRef.current = onSelectStructure;
 
@@ -381,6 +490,9 @@ export default function EmbryoScene({
     if (!mount) return;
 
     const scene = new THREE.Scene();
+    const transitionRoot = new THREE.Group();
+    transitionRoot.name = 'stage-transition-layer';
+    scene.add(transitionRoot);
     scene.background = new THREE.Color('#07111f');
     scene.fog = new THREE.Fog('#07111f', 18, 36);
 
@@ -565,7 +677,9 @@ export default function EmbryoScene({
     gridMaterial.opacity = 0.11;
     scene.add(grid);
 
-    apiRef.current = { camera, controls, objects };
+    const fades: FadeRecord[] = [];
+    const clock = new THREE.Clock();
+    apiRef.current = { camera, controls, objects, transitionRoot, fades, cameraTween: null, clock };
 
     const resize = () => {
       const width = Math.max(mount.clientWidth, 1);
@@ -601,6 +715,52 @@ export default function EmbryoScene({
     let frame = 0;
     const render = () => {
       frame = window.requestAnimationFrame(render);
+      const api = apiRef.current;
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const now = performance.now();
+
+      if (api) {
+        api.objects.forEach((object) => {
+          beginFadeIn(object, api.fades, now);
+          const targetScale = object.userData.targetScale;
+          if (typeof targetScale === 'number') {
+            const alpha = 1 - Math.exp(-6 * delta);
+            const nextScale = object.scale.x + (targetScale - object.scale.x) * alpha;
+            object.scale.setScalar(Math.abs(targetScale - nextScale) < 0.001 ? targetScale : nextScale);
+          }
+        });
+        updateFadeTransitions(api.fades, api.transitionRoot, now);
+        if (api.cameraTween) {
+          const tween = api.cameraTween;
+          const progress = Math.min(1, Math.max(0, (now - tween.startedAt) / tween.duration));
+          const eased = progress * progress * (3 - 2 * progress);
+          camera.position.copy(tween.fromPosition).lerp(tween.toPosition, eased);
+          controls.target.copy(tween.fromTarget).lerp(tween.toTarget, eased);
+          camera.up.copy(tween.fromUp).lerp(tween.toUp, eased).normalize();
+          if (progress >= 1) {
+            camera.position.copy(tween.toPosition);
+            controls.target.copy(tween.toTarget);
+            camera.up.copy(tween.toUp);
+            api.cameraTween = null;
+          }
+        }
+      }
+
+      const elapsed = clock.elapsedTime;
+      scene.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        const curve = mesh.userData.flowCurve as THREE.CatmullRomCurve3 | undefined;
+        if (!mesh.isMesh || !curve) return;
+        const offset = mesh.userData.flowOffset as number;
+        const speed = mesh.userData.flowSpeed as number;
+        const phase = (elapsed * speed + offset) % 1;
+        const progress = 0.08 + phase * 0.84;
+        const position = curve.getPointAt(progress);
+        const direction = curve.getTangentAt(progress).normalize();
+        mesh.position.copy(position).addScaledVector(direction, 0.02);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+        mesh.scale.setScalar(0.92 + 0.08 * Math.sin(elapsed * 4.5 + offset * Math.PI * 2));
+      });
       controls.update();
       renderer.render(scene, camera);
     };
@@ -626,6 +786,13 @@ export default function EmbryoScene({
   }, []);
 
   useEffect(() => {
+    const nextKey = `${stage.id}:${profile}:${cardinalModel}`;
+    stageChangePendingRef.current = previousStageKeyRef.current !== null
+      && previousStageKeyRef.current !== nextKey;
+    previousStageKeyRef.current = nextKey;
+  }, [stage.id, profile, cardinalModel]);
+
+  useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const vesselIds = new Set([
@@ -649,7 +816,7 @@ export default function EmbryoScene({
     VITELLINE_SEGMENTS.forEach((segment) => {
       const group = api.objects.get(segment.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
       const presentation = getVesselPresentation(segment, profile, stageId);
       group.visible = (visibleLayers[segment.id] ?? true) && presentation.visible;
       group.userData.vesselState = presentation.state;
@@ -676,7 +843,7 @@ export default function EmbryoScene({
     HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
       const presentation = getHepaticLayerPresentation(layer, profile, stageId);
       group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
       group.userData.vesselState = presentation.state;
@@ -704,7 +871,7 @@ export default function EmbryoScene({
     HEPATIC_OUTFLOW_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
       const presentation = getHepaticOutflowPresentation(layer, profile, stageId);
       group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
       group.userData.vesselState = presentation.state;
@@ -737,7 +904,7 @@ export default function EmbryoScene({
     INTERVITELLINE_ANASTOMOSES.forEach((item) => {
       const group = api.objects.get(item.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
       const presentation = getIntervitellinePresentation(item, profile, stageId);
       group.visible = (visibleLayers[item.id] ?? true) && presentation.visible;
       group.userData.vesselState = presentation.state;
@@ -764,7 +931,7 @@ export default function EmbryoScene({
     PORTAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
       const presentation = getPortalLayerPresentation(layer, profile, stageId);
       group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
       group.userData.vesselState = presentation.state;
@@ -792,7 +959,7 @@ export default function EmbryoScene({
     UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
       const presentation = getUmbilicalLayerPresentation(layer, profile, stageId);
       group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
       group.userData.vesselState = presentation.state;
@@ -825,7 +992,7 @@ export default function EmbryoScene({
     CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
       const presentation = getCardinalLayerPresentation(layer, cardinalModel, stageId);
       group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
       group.userData.vesselState = presentation.state;
@@ -852,6 +1019,10 @@ export default function EmbryoScene({
   }, [stage, cardinalModel, visibleLayers, selectedStructure]);
 
   useEffect(() => {
+    stageChangePendingRef.current = false;
+  }, [stage.id, profile, cardinalModel]);
+
+  useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
@@ -868,8 +1039,10 @@ export default function EmbryoScene({
       const object = api.objects.get(id);
       if (object) object.visible = (visibleLayers[id] ?? true) && mesonephrosVisible;
     }
-    api.objects.get('liver')?.scale.setScalar(stage.liverScale);
-    api.objects.get('duodenum')?.scale.setScalar(stage.duodenumScale);
+    const liver = api.objects.get('liver');
+    if (liver) liver.userData.targetScale = stage.liverScale;
+    const duodenum = api.objects.get('duodenum');
+    if (duodenum) duodenum.userData.targetScale = stage.duodenumScale;
     const pancreas = api.objects.get('dorsal-pancreatic-bud');
     if (pancreas) {
       pancreas.visible = (visibleLayers['dorsal-pancreatic-bud'] ?? true)
@@ -895,8 +1068,9 @@ export default function EmbryoScene({
       return;
     }
     const zoomRatio = Math.pow(0.9, zoomStep - zoomStepRef.current);
-    api.camera.position.sub(api.controls.target).multiplyScalar(zoomRatio).add(api.controls.target);
-    api.controls.update();
+    const target = api.controls.target.clone();
+    const position = api.camera.position.clone().sub(target).multiplyScalar(zoomRatio).add(target);
+    startCameraTween(api, position, target, api.camera.up.clone(), 420);
     zoomStepRef.current = zoomStep;
   }, [zoomStep]);
 
@@ -904,16 +1078,13 @@ export default function EmbryoScene({
     const api = apiRef.current;
     if (!api) return;
     const position = viewFor(cameraPreset);
-    api.camera.up.set(0, 1, 0);
-    if (cameraPreset === 'superior') api.camera.up.set(0, 0, -1);
-    if (cameraPreset === 'inferior') api.camera.up.set(0, 0, 1);
-    api.controls.target.set(0, 0.45, 0);
-    api.camera.position.set(position[0], position[1], position[2]);
-    api.camera.position.sub(api.controls.target)
-      .multiplyScalar(Math.pow(0.9, zoomStepRef.current))
-      .add(api.controls.target);
-    api.camera.lookAt(api.controls.target);
-    api.controls.update();
+    const target = new THREE.Vector3(0, 0.45, 0);
+    const up = new THREE.Vector3(0, 1, 0);
+    if (cameraPreset === 'superior') up.set(0, 0, -1);
+    if (cameraPreset === 'inferior') up.set(0, 0, 1);
+    const destination = new THREE.Vector3(position[0], position[1], position[2]);
+    destination.sub(target).multiplyScalar(Math.pow(0.9, zoomStepRef.current)).add(target);
+    startCameraTween(api, destination, target, up);
   }, [cameraPreset]);
 
   return <div className="scene-mount" ref={mountRef} />;

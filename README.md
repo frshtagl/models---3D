@@ -4,8 +4,8 @@ An evidence-aware, version-controlled 3D embryology workstation. The first learn
 
 ## Current status
 
-- **Development branch:** feature/vitelline-veins-3d
-- **Current milestone:** Milestone 8 — refined 3D vessel surfaces, embryo envelope and Optuna-tuned rendering
+- **Base branch:** feature/vitelline-veins-3d
+- **Animation upgrade:** upgrade/animation-refinement — eased developmental transitions, moving flow indicators and camera / organ-growth interpolation
 - **Application:** React + TypeScript + Vite + Three.js
 - **Anatomy status:** paired vitelline channels, hepatic sinusoidal network, classical and human portal pathways, six hepatic-outflow layers, paired umbilical-vein pathways, eight cardinal layers, subcardinal plexus and an explicit two-model IVC / azygos interpretation selector
 - **Verification:** Optuna TPE completed 80 trials over 86 centre-lines; TypeScript validation, graph validation and Vite production build passed in GitHub Actions; pixel-level browser review pending
@@ -33,7 +33,9 @@ Production verification:
 - Use keyboard shortcuts for stage navigation, camera presets, zoom, teaching guide, full screen and anatomy-layer visibility; press `?` at any time to open the shortcut reference.
 - Switch between anterior, posterior, right, left, superior and inferior camera views.
 - Navigate Carnegie stages CS10, CS12, CS13, CS14, CS15 and CS16.
-- Play the stage sequence.
+- Play the stage sequence with a slower teaching cadence and smooth crossfades between stage-specific vessel states.
+- Watch directional flow markers travel along authored vessel paths; the markers indicate direction, not measured blood velocity.
+- Use eased camera presets / zoom and smoothly interpolated liver / duodenum growth between stage bins.
 - Select structures from the scene or anatomy layer list.
 - Toggle layer visibility or isolate the selected structure.
 - Switch the scientific evidence profile; the profile changes left-sided remodeling states without blending the two published models.
@@ -101,6 +103,10 @@ They must not be blended into one invented developmental sequence. Each profile 
 29. [Milestone 8 geometry refinement report](docs/milestones/MILESTONE_8_REPORT.md)
 30. [Optuna vessel geometry optimiser](scripts/optimize_vessel_geometry.py)
 29. [Umbilical and cardinal browser teaching guide](docs/teaching/UMBILICAL_CARDINAL_BROWSER_TEACHING_GUIDE.md)
+
+## Animation refinement
+
+The upgrade/animation-refinement branch adds a short crossfade for stage-specific vessel replacement, continuously moving flow-direction markers on authored paths, eased camera presets and zoom, and interpolated organ-scale changes. These are presentation transitions only: they do not interpolate anatomical centre-lines, invent intermediate vessel topology, or imply measured growth rates / blood velocity. Automated validation checks these safeguards; final browser pixel review remains a separate release gate.
 
 ## Planned development
 

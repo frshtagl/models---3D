@@ -97,7 +97,7 @@ export default function App() {
     if (!playing) return;
     const timer = window.setInterval(() => {
       setStageIndex((current) => (current + 1) % DEVELOPMENT_STAGES.length);
-    }, 2400);
+    }, 3200);
     return () => window.clearInterval(timer);
   }, [playing]);
 

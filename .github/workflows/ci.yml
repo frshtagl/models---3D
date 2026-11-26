@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/vitelline-veins-3d
 
 permissions:
   contents: read
