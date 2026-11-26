@@ -1006,9 +1006,9 @@ export default function EmbryoScene({
     VITELLINE_SEGMENTS.forEach((segment) => {
       const group = api.objects.get(segment.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getVesselPresentation(segment, profile, stageId);
-      group.visible = (visibleLayers[segment.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       presentation.paths.forEach((path) => {
@@ -1022,9 +1022,9 @@ export default function EmbryoScene({
         mesh.userData.structureId = segment.id;
         group.add(mesh);
       });
-      highlight(group, segment.id === selectedStructure);
+      // Selection highlighting is handled separately; do not rebuild geometry for a selection change.
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -1033,9 +1033,9 @@ export default function EmbryoScene({
     HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getHepaticLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -1050,9 +1050,9 @@ export default function EmbryoScene({
         mesh.userData.pathId = pathItem.id;
         group.add(mesh);
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -1061,9 +1061,9 @@ export default function EmbryoScene({
     HEPATIC_OUTFLOW_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getHepaticOutflowPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -1080,12 +1080,13 @@ export default function EmbryoScene({
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
             group.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -1094,9 +1095,9 @@ export default function EmbryoScene({
     INTERVITELLINE_ANASTOMOSES.forEach((item) => {
       const group = api.objects.get(item.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getIntervitellinePresentation(item, profile, stageId);
-      group.visible = (visibleLayers[item.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       const mesh = makeVesselMesh(
@@ -1110,9 +1111,9 @@ export default function EmbryoScene({
         mesh.userData.anastomosisId = item.id;
         group.add(mesh);
       }
-      highlight(group, item.id === selectedStructure);
+      // Selection highlighting is handled separately; do not rebuild geometry for a selection change.
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -1121,9 +1122,9 @@ export default function EmbryoScene({
     PORTAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getPortalLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -1138,9 +1139,9 @@ export default function EmbryoScene({
         mesh.userData.pathId = pathItem.id;
         group.add(mesh);
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -1149,9 +1150,9 @@ export default function EmbryoScene({
     UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getUmbilicalLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -1168,12 +1169,13 @@ export default function EmbryoScene({
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
             group.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -1182,9 +1184,9 @@ export default function EmbryoScene({
     CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group, api.transitionRoot, api.fades, stageChangePendingRef.current);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getCardinalLayerPresentation(layer, cardinalModel, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -1201,12 +1203,13 @@ export default function EmbryoScene({
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
             group.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, cardinalModel, visibleLayers, selectedStructure]);
+  }, [stage.id, cardinalModel]);
 
   useEffect(() => {
     stageChangePendingRef.current = false;
@@ -1216,14 +1219,33 @@ export default function EmbryoScene({
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
-    UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
-      const group = api.objects.get(layer.id);
-      if (group) group.visible = (visibleLayers[layer.id] ?? true) && getUmbilicalLayerPresentation(layer, profile, stageId).visible;
-    });
-    CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
-      const group = api.objects.get(layer.id);
-      if (group) group.visible = (visibleLayers[layer.id] ?? true) && getCardinalLayerPresentation(layer, cardinalModel, stageId).visible;
-    });
+    const setLayerVisibility = (id: string, presentationVisible: boolean) => {
+      const group = api.objects.get(id);
+      if (group) group.visible = (visibleLayers[id] ?? true) && presentationVisible;
+    };
+
+    VITELLINE_SEGMENTS.forEach((segment) =>
+      setLayerVisibility(segment.id, getVesselPresentation(segment, profile, stageId).visible)
+    );
+    HEPATIC_VASCULAR_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getHepaticLayerPresentation(layer, profile, stageId).visible)
+    );
+    HEPATIC_OUTFLOW_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getHepaticOutflowPresentation(layer, profile, stageId).visible)
+    );
+    INTERVITELLINE_ANASTOMOSES.forEach((item) =>
+      setLayerVisibility(item.id, getIntervitellinePresentation(item, profile, stageId).visible)
+    );
+    PORTAL_VASCULAR_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getPortalLayerPresentation(layer, profile, stageId).visible)
+    );
+    UMBILICAL_VASCULAR_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getUmbilicalLayerPresentation(layer, profile, stageId).visible)
+    );
+    CARDINAL_VASCULAR_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getCardinalLayerPresentation(layer, cardinalModel, stageId).visible)
+    );
+
     const mesonephrosVisible = ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
     for (const id of ['mesonephros-right', 'mesonephros-left']) {
       const object = api.objects.get(id);
@@ -1243,7 +1265,7 @@ export default function EmbryoScene({
       gallbladder.visible = (visibleLayers['portal-gallbladder'] ?? true)
         && ['cs14', 'cs15', 'cs16'].includes(stage.id);
     }
-  }, [stage, visibleLayers]);
+  }, [stage.id, profile, cardinalModel, visibleLayers]);
 
   useEffect(() => {
     const api = apiRef.current;
