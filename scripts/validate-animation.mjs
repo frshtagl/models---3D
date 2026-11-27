@@ -34,7 +34,7 @@ assert.match(renderTuning, /toneMappingExposure: 1\.08/);
 assert.match(renderTuning, /contextTeachingOpacity: 0\.28/);
 assert.match(scene, /const leftWing =/);
 assert.match(scene, /const rightWing =/);
-assert.match(scene, /const baseDepth = 0\.52 \+ 0\.17 \* form/);
+assert.match(scene, /const depth = 0\.43 \+ 0\.1 \* form/);
 assert.match(scene, /liver\.userData\.geometryStage !== stage\.id/);
 assert.match(scene, /function makeHollowOrganTube/);
 assert.match(scene, /const stride = ringSize \* 2/);
@@ -60,12 +60,14 @@ assert.match(scene, /function makeDorsalPancreaticBud/);
 assert.doesNotMatch(scene, /\}, \[stage, profile, visibleLayers, selectedStructure\]\);/);
 assert.doesNotMatch(scene, /scene\.traverse\(\(object\) => \{\s*const mesh = object as THREE\.Mesh;\s*const curve = mesh\.userData\.flowCurve/);
 assert.match(scene, /\}, \[stage\.id, profile, cardinalModel\]\);/);
-assert.match(scene, /group\.visible = presentation\.visible/);
+assert.match(scene, /group\.visible = \(visibleLayers\[id\] \?\? true\) && presentationVisible && modeVisible/);
+assert.match(scene, /const staticVisibility: Record<string, boolean>/);
+assert.match(scene, /const contextOpacity = displayMode === 'teaching'/);
 assert.match(config, /samplesPerUnit: 28/);
 assert.match(config, /minorAxisScale: 0\.93/);
 assert.match(config, /globalRadiusScale: 0\.84/);
 assert.match(config, /endpointRadiusScale: 0\.9/);
-assert.match(config, /radialSegments: 32/);
+assert.match(config, /radialSegments: 40/);
 
 // Authored anatomical graph files remain present and editable.
 const authoredGeometryFiles = [
