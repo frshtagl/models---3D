@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/vitelline-veins-3d
+      - feat/developmental-animation-engine
   pull_request:
     branches:
       - main
@@ -47,6 +48,9 @@ jobs:
 
       - name: TypeScript validation
         run: npm run typecheck
+
+      - name: Developmental animation validation
+        run: npm run validate:animation
 
       - name: Production build
         run: npm run build
