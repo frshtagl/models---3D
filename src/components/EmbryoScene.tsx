@@ -14,6 +14,9 @@ import { UMBILICAL_VASCULAR_LAYERS, getUmbilicalLayerPresentation } from '../dat
 import { CARDINAL_VASCULAR_LAYERS, getCardinalLayerPresentation } from '../data/cardinalNetwork';
 import type { CardinalModel } from '../data/cardinalNetwork';
 import { VESSEL_RENDER_CONFIG } from '../data/geometryTuning';
+import { ANIMATION_TIMINGS, AnimationEngine, crossFadeGroup, fadeObject, tweenVector3 } from '../animation/AnimationEngine';
+
+const FLOW_AXIS = new THREE.Vector3(0, 1, 0);
 
 export type CameraPreset = 'anterior' | 'posterior' | 'right' | 'left' | 'superior' | 'inferior' | 'oblique' | 'reset';
 
@@ -32,6 +35,8 @@ interface SceneApi {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   objects: Map<string, THREE.Object3D>;
+  animator: AnimationEngine;
+  flowMarkers: Set<THREE.Mesh>;
 }
 
 function tube(points: THREE.Vector3[], radius: number, color: string) {
@@ -327,44 +332,27 @@ function makeVesselMesh(
 
 function makeFlowArrow(points: readonly Point3[], color: string, radius: number): THREE.Mesh | null {
   if (points.length < 2) return null;
-  const curve = new THREE.CatmullRomCurve3(
-    points.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-    false,
-    VESSEL_RENDER_CONFIG.curveType
-  );
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, VESSEL_RENDER_CONFIG.curveType);
   const position = curve.getPointAt(0.72);
   const direction = curve.getTangentAt(0.72).normalize();
   if (direction.lengthSq() < 1e-8) return null;
-  const height = Math.max(radius * 2.5, 0.065);
+  const height = Math.max(radius * 1.55, 0.04);
   const arrow = new THREE.Mesh(
-    new THREE.ConeGeometry(Math.max(radius * 1.35, 0.022), height, 16, 1),
+    new THREE.ConeGeometry(Math.max(radius * 0.82, 0.014), height, 12, 1),
     new THREE.MeshPhysicalMaterial({
-      color,
-      roughness: 0.34,
-      metalness: 0.01,
-      clearcoat: 0.24,
-      emissive: color,
-      emissiveIntensity: 0.08
+      color, roughness: 0.72, metalness: 0, clearcoat: 0.035,
+      emissive: '#000000', emissiveIntensity: 0
     })
   );
-  arrow.position.copy(position).addScaledVector(direction, height * 0.12);
-  arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+  arrow.position.copy(position).addScaledVector(direction, height * 0.08);
+  arrow.quaternion.setFromUnitVectors(FLOW_AXIS, direction);
+  arrow.userData.flowMarker = true;
+  arrow.userData.flowCurve = curve;
+  arrow.userData.flowSpeed = ANIMATION_TIMINGS.flowCyclesPerSecond;
+  arrow.userData.flowOffset = (Math.abs(points[0][0]) * 0.173 + points.length * 0.071) % 1;
+  arrow.userData.flowPosition = new THREE.Vector3();
+  arrow.userData.flowTangent = new THREE.Vector3();
   return arrow;
-}
-
-function clearGroup(group: THREE.Group) {
-  const children = [...group.children];
-  group.clear();
-  children.forEach((child) => {
-    child.traverse((object) => {
-      const mesh = object as THREE.Mesh;
-      if (mesh.geometry) mesh.geometry.dispose();
-      if (mesh.material) {
-        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        materials.forEach((material) => material.dispose());
-      }
-    });
-  });
 }
 
 export default function EmbryoScene({
@@ -379,6 +367,11 @@ export default function EmbryoScene({
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const animator = new AnimationEngine(motionPreference.matches);
+    const onMotionPreferenceChange = (event: MediaQueryListEvent) => animator.setReducedMotion(event.matches);
+    motionPreference.addEventListener('change', onMotionPreferenceChange);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#07111f');
@@ -397,6 +390,8 @@ export default function EmbryoScene({
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
+    const cancelCameraAnimation = () => animator.cancel('camera:preset');
+    controls.addEventListener('start', cancelCameraAnimation);
     controls.enableDamping = true;
     controls.dampingFactor = 0.075;
     controls.minDistance = 4.5;
@@ -412,6 +407,7 @@ export default function EmbryoScene({
     scene.add(rim);
 
     const objects = new Map<string, THREE.Object3D>();
+    const flowMarkers = new Set<THREE.Mesh>();
     const add = (id: string, object: THREE.Object3D) => {
       object.name = id;
       object.userData.structureId = id;
@@ -565,7 +561,7 @@ export default function EmbryoScene({
     gridMaterial.opacity = 0.11;
     scene.add(grid);
 
-    apiRef.current = { camera, controls, objects };
+    apiRef.current = { camera, controls, objects, animator, flowMarkers };
 
     const resize = () => {
       const width = Math.max(mount.clientWidth, 1);
@@ -598,9 +594,31 @@ export default function EmbryoScene({
     };
     renderer.domElement.addEventListener('pointerdown', pointerDown);
 
+    const clock = new THREE.Clock();
+    let elapsedSeconds = 0;
     let frame = 0;
     const render = () => {
       frame = window.requestAnimationFrame(render);
+      const deltaSeconds = Math.min(clock.getDelta(), 0.05);
+      animator.update(deltaSeconds);
+      elapsedSeconds += deltaSeconds;
+      if (!animator.prefersReducedMotion) {
+        for (const marker of flowMarkers) {
+          if (!marker.parent) { flowMarkers.delete(marker); continue; }
+          if (!marker.visible) continue;
+          const curve = marker.userData.flowCurve as THREE.CatmullRomCurve3 | undefined;
+          const position = marker.userData.flowPosition as THREE.Vector3 | undefined;
+          const tangent = marker.userData.flowTangent as THREE.Vector3 | undefined;
+          if (!curve || !position || !tangent) continue;
+          const speed = (marker.userData.flowSpeed as number | undefined) ?? ANIMATION_TIMINGS.flowCyclesPerSecond;
+          const offset = (marker.userData.flowOffset as number | undefined) ?? 0;
+          const progress = (elapsedSeconds * speed + offset) % 1;
+          curve.getPointAt(progress, position);
+          curve.getTangentAt(progress, tangent).normalize();
+          marker.position.copy(position);
+          marker.quaternion.setFromUnitVectors(FLOW_AXIS, tangent);
+        }
+      }
       controls.update();
       renderer.render(scene, camera);
     };
@@ -610,7 +628,11 @@ export default function EmbryoScene({
       window.cancelAnimationFrame(frame);
       observer.disconnect();
       renderer.domElement.removeEventListener('pointerdown', pointerDown);
+      controls.removeEventListener('start', cancelCameraAnimation);
       controls.dispose();
+      animator.dispose();
+      motionPreference.removeEventListener('change', onMotionPreferenceChange);
+      flowMarkers.clear();
       scene.traverse((object) => {
         const mesh = object as THREE.Mesh;
         if (mesh.geometry) mesh.geometry.dispose();
@@ -628,19 +650,14 @@ export default function EmbryoScene({
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
-    const vesselIds = new Set([
-      ...VITELLINE_SEGMENTS.map((segment) => segment.id),
-      ...HEPATIC_VASCULAR_LAYERS.map((layer) => layer.id),
-      ...HEPATIC_OUTFLOW_LAYERS.map((layer) => layer.id),
-      ...INTERVITELLINE_ANASTOMOSES.map((item) => item.id),
-      ...PORTAL_VASCULAR_LAYERS.map((layer) => layer.id),
-      ...UMBILICAL_VASCULAR_LAYERS.map((layer) => layer.id),
-      ...CARDINAL_VASCULAR_LAYERS.map((layer) => layer.id)
-    ]);
     api.objects.forEach((object, id) => {
-      if (!vesselIds.has(id)) object.visible = visibleLayers[id] ?? true;
+      const layerVisible = visibleLayers[id] ?? true;
+      object.userData.layerVisible = layerVisible;
+      const stageVisible = object.userData.stageVisible !== false;
+      if (!layerVisible) object.visible = false;
+      else if (stageVisible) object.visible = true;
     });
-  }, [visibleLayers]);
+  }, [visibleLayers]);  }, [visibleLayers]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -649,9 +666,9 @@ export default function EmbryoScene({
     VITELLINE_SEGMENTS.forEach((segment) => {
       const group = api.objects.get(segment.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      const next = new THREE.Group();
       const presentation = getVesselPresentation(segment, profile, stageId);
-      group.visible = (visibleLayers[segment.id] ?? true) && presentation.visible;
+      next.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       presentation.paths.forEach((path) => {
@@ -663,11 +680,12 @@ export default function EmbryoScene({
         );
         if (!mesh) return;
         mesh.userData.structureId = segment.id;
-        group.add(mesh);
+        next.add(mesh);
       });
+      crossFadeGroup(group, next, api.animator, `vitelline:${segment.id}`);
       highlight(group, segment.id === selectedStructure);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -676,9 +694,9 @@ export default function EmbryoScene({
     HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      const next = new THREE.Group();
       const presentation = getHepaticLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      next.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -691,11 +709,12 @@ export default function EmbryoScene({
         if (!mesh) return;
         mesh.userData.structureId = layer.id;
         mesh.userData.pathId = pathItem.id;
-        group.add(mesh);
+        next.add(mesh);
       });
+      crossFadeGroup(group, next, api.animator, `hepatic:${layer.id}`);
       highlight(group, layer.id === selectedStructure);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -704,9 +723,9 @@ export default function EmbryoScene({
     HEPATIC_OUTFLOW_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      const next = new THREE.Group();
       const presentation = getHepaticOutflowPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      next.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -715,20 +734,22 @@ export default function EmbryoScene({
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
-          group.add(mesh);
+          next.add(mesh);
         }
         if (pathItem.flowArrow) {
           const arrow = makeFlowArrow(pathItem.points, layer.color, radius);
           if (arrow) {
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
-            group.add(arrow);
+            next.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
+      crossFadeGroup(group, next, api.animator, `hepatic-outflow:${layer.id}`);
       highlight(group, layer.id === selectedStructure);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -737,9 +758,9 @@ export default function EmbryoScene({
     INTERVITELLINE_ANASTOMOSES.forEach((item) => {
       const group = api.objects.get(item.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      const next = new THREE.Group();
       const presentation = getIntervitellinePresentation(item, profile, stageId);
-      group.visible = (visibleLayers[item.id] ?? true) && presentation.visible;
+      next.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       const mesh = makeVesselMesh(
@@ -751,11 +772,12 @@ export default function EmbryoScene({
       if (mesh) {
         mesh.userData.structureId = item.id;
         mesh.userData.anastomosisId = item.id;
-        group.add(mesh);
+        next.add(mesh);
       }
+      crossFadeGroup(group, next, api.animator, `intervitelline:${item.id}`);
       highlight(group, item.id === selectedStructure);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -764,9 +786,9 @@ export default function EmbryoScene({
     PORTAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      const next = new THREE.Group();
       const presentation = getPortalLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      next.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -779,11 +801,12 @@ export default function EmbryoScene({
         if (!mesh) return;
         mesh.userData.structureId = layer.id;
         mesh.userData.pathId = pathItem.id;
-        group.add(mesh);
+        next.add(mesh);
       });
+      crossFadeGroup(group, next, api.animator, `portal:${layer.id}`);
       highlight(group, layer.id === selectedStructure);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -792,9 +815,9 @@ export default function EmbryoScene({
     UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      const next = new THREE.Group();
       const presentation = getUmbilicalLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      next.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -803,20 +826,22 @@ export default function EmbryoScene({
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
-          group.add(mesh);
+          next.add(mesh);
         }
         if (pathItem.flowArrow) {
           const arrow = makeFlowArrow(pathItem.points, layer.color, radius);
           if (arrow) {
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
-            group.add(arrow);
+            next.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
+      crossFadeGroup(group, next, api.animator, `umbilical:${layer.id}`);
       highlight(group, layer.id === selectedStructure);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -825,9 +850,9 @@ export default function EmbryoScene({
     CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      const next = new THREE.Group();
       const presentation = getCardinalLayerPresentation(layer, cardinalModel, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      next.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
@@ -836,51 +861,65 @@ export default function EmbryoScene({
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
-          group.add(mesh);
+          next.add(mesh);
         }
         if (pathItem.flowArrow) {
           const arrow = makeFlowArrow(pathItem.points, layer.color, radius);
           if (arrow) {
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
-            group.add(arrow);
+            next.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
+      crossFadeGroup(group, next, api.animator, `cardinal:${layer.id}`);
       highlight(group, layer.id === selectedStructure);
     });
-  }, [stage, cardinalModel, visibleLayers, selectedStructure]);
+  }, [stage.id, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
-    const stageId = stage.id as VitellineStageId;
-    UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
-      const group = api.objects.get(layer.id);
-      if (group) group.visible = (visibleLayers[layer.id] ?? true) && getUmbilicalLayerPresentation(layer, profile, stageId).visible;
-    });
-    CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
-      const group = api.objects.get(layer.id);
-      if (group) group.visible = (visibleLayers[layer.id] ?? true) && getCardinalLayerPresentation(layer, cardinalModel, stageId).visible;
-    });
-    const mesonephrosVisible = ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
-    for (const id of ['mesonephros-right', 'mesonephros-left']) {
+
+    const animateScale = (id: string, value: number) => {
       const object = api.objects.get(id);
-      if (object) object.visible = (visibleLayers[id] ?? true) && mesonephrosVisible;
-    }
-    api.objects.get('liver')?.scale.setScalar(stage.liverScale);
-    api.objects.get('duodenum')?.scale.setScalar(stage.duodenumScale);
-    const pancreas = api.objects.get('dorsal-pancreatic-bud');
-    if (pancreas) {
-      pancreas.visible = (visibleLayers['dorsal-pancreatic-bud'] ?? true)
-        && ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
-    }
-    const gallbladder = api.objects.get('portal-gallbladder');
-    if (gallbladder) {
-      gallbladder.visible = (visibleLayers['portal-gallbladder'] ?? true)
-        && ['cs14', 'cs15', 'cs16'].includes(stage.id);
-    }
-  }, [stage, visibleLayers]);
+      if (!object) return;
+      tweenVector3(
+        api.animator,
+        `organ-scale:${id}`,
+        object.scale,
+        new THREE.Vector3(value, value, value),
+        ANIMATION_TIMINGS.organScaleSeconds
+      );
+    };
+
+    const transitionStageVisibility = (id: string, stageVisible: boolean) => {
+      const object = api.objects.get(id);
+      if (!object) return;
+      object.userData.stageVisible = stageVisible;
+      const layerVisible = object.userData.layerVisible !== false;
+      if (stageVisible) object.visible = layerVisible;
+      else if (layerVisible) object.visible = true;
+      fadeObject(
+        api.animator,
+        object,
+        stageVisible ? 1 : 0,
+        ANIMATION_TIMINGS.landmarkFadeSeconds,
+        `stage-visibility:${id}`,
+        () => { if (object.userData.stageVisible === false) object.visible = false; }
+      );
+    };
+
+    animateScale('liver', stage.liverScale);
+    animateScale('duodenum', stage.duodenumScale);
+    const mesonephrosVisible = ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
+    transitionStageVisibility('mesonephros-right', mesonephrosVisible);
+    transitionStageVisibility('mesonephros-left', mesonephrosVisible);
+    transitionStageVisibility('dorsal-pancreatic-bud', mesonephrosVisible);
+    const gallbladderVisible = ['cs14', 'cs15', 'cs16'].includes(stage.id);
+    transitionStageVisibility('portal-gallbladder', gallbladderVisible);
+  }, [stage.id]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -903,17 +942,23 @@ export default function EmbryoScene({
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
+    const target = new THREE.Vector3(0, 0.45, 0);
     const position = viewFor(cameraPreset);
-    api.camera.up.set(0, 1, 0);
-    if (cameraPreset === 'superior') api.camera.up.set(0, 0, -1);
-    if (cameraPreset === 'inferior') api.camera.up.set(0, 0, 1);
-    api.controls.target.set(0, 0.45, 0);
-    api.camera.position.set(position[0], position[1], position[2]);
-    api.camera.position.sub(api.controls.target)
-      .multiplyScalar(Math.pow(0.9, zoomStepRef.current))
-      .add(api.controls.target);
-    api.camera.lookAt(api.controls.target);
-    api.controls.update();
+    const destination = new THREE.Vector3(position[0], position[1], position[2]);
+    destination.sub(target).multiplyScalar(Math.pow(0.9, zoomStepRef.current)).add(target);
+    const up = new THREE.Vector3(0, 1, 0);
+    if (cameraPreset === 'superior') up.set(0, 0, -1);
+    if (cameraPreset === 'inferior') up.set(0, 0, 1);
+    const startPosition = api.camera.position.clone();
+    const startTarget = api.controls.target.clone();
+    const startUp = api.camera.up.clone();
+    api.animator.tween('camera:preset', ANIMATION_TIMINGS.cameraSeconds, (progress) => {
+      api.camera.position.lerpVectors(startPosition, destination, progress);
+      api.controls.target.lerpVectors(startTarget, target, progress);
+      api.camera.up.lerpVectors(startUp, up, progress).normalize();
+      api.camera.lookAt(api.controls.target);
+      api.controls.update();
+    });
   }, [cameraPreset]);
 
   return <div className="scene-mount" ref={mountRef} />;

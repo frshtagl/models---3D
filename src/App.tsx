@@ -21,6 +21,7 @@ import { HEPATIC_OUTFLOW_LAYERS, HEPATIC_OUTFLOW_NODES, HEPATIC_OUTFLOW_NETWORK_
 import { UMBILICAL_VASCULAR_LAYERS, UMBILICAL_NODES, UMBILICAL_NETWORK_ISSUES, getUmbilicalLayerPresentation } from './data/umbilicalNetwork';
 import { CARDINAL_VASCULAR_LAYERS, CARDINAL_NODES, CARDINAL_NETWORK_ISSUES, CARDINAL_MODEL_LABELS, CARDINAL_MODEL_DESCRIPTIONS, getCardinalLayerPresentation } from './data/cardinalNetwork';
 import type { CardinalModel } from './data/cardinalNetwork';
+import { ANIMATION_TIMINGS } from './animation/AnimationEngine';
 import { PORTAL_TEACHING_STEPS } from './data/portalTeachingGuide';
 
 const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
@@ -95,11 +96,11 @@ export default function App() {
 
   useEffect(() => {
     if (!playing) return;
-    const timer = window.setInterval(() => {
+    const timer = window.setTimeout(() => {
       setStageIndex((current) => (current + 1) % DEVELOPMENT_STAGES.length);
-    }, 2400);
-    return () => window.clearInterval(timer);
-  }, [playing]);
+    }, ANIMATION_TIMINGS.autoplayHoldMs);
+    return () => window.clearTimeout(timer);
+  }, [playing, stageIndex]);
 
   useEffect(() => {
     const syncFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
