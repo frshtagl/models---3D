@@ -1,0 +1,22 @@
+export const SCENE_RENDER_TUNING = {
+  background: '#091522',
+  toneMappingExposure: 1.08,
+  fogDensity: 0.009,
+  hemisphereSky: '#dce8f2',
+  hemisphereGround: '#17232d',
+  hemisphereIntensity: 0.82,
+  keyColor: '#fff1e5',
+  keyIntensity: 2.05,
+  fillColor: '#a9c6dc',
+  fillIntensity: 0.68,
+  rimColor: '#d5e4f0',
+  rimIntensity: 1.12,
+  contextTeachingOpacity: 0.28,
+  contextNetworkOpacity: 0.44,
+  sinusoidTeachingOpacity: 0.48,
+  vesselRoughness: 0.56,
+  vesselClearcoat: 0.045,
+  vesselClearcoatRoughness: 0.62,
+  organRoughness: 0.83,
+  organClearcoat: 0.018
+} as const;

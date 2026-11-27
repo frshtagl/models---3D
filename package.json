@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && npm run validate:graph && vite build",
+    "build": "npm run typecheck && npm run validate:graph && npm run validate:animation && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "validate:graph": "node scripts/validate-hepatic-outflow.mjs"
+    "validate:graph": "node scripts/validate-hepatic-outflow.mjs",
+    "validate:animation": "node scripts/validate-animation.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

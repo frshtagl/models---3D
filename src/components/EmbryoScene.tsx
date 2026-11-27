@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { DevelopmentStage } from '../data/stages';
 import type { StructureVisibility } from '../data/structures';
 import type { EvidenceProfile } from '../data/stages';
@@ -14,8 +15,10 @@ import { UMBILICAL_VASCULAR_LAYERS, getUmbilicalLayerPresentation } from '../dat
 import { CARDINAL_VASCULAR_LAYERS, getCardinalLayerPresentation } from '../data/cardinalNetwork';
 import type { CardinalModel } from '../data/cardinalNetwork';
 import { VESSEL_RENDER_CONFIG } from '../data/geometryTuning';
+import { SCENE_RENDER_TUNING } from '../data/renderTuning';
 
 export type CameraPreset = 'anterior' | 'posterior' | 'right' | 'left' | 'superior' | 'inferior' | 'oblique' | 'reset';
+export type SceneDisplayMode = 'clean' | 'teaching' | 'network';
 
 interface Props {
   stage: DevelopmentStage;
@@ -25,27 +28,233 @@ interface Props {
   selectedStructure: string | null;
   cameraPreset: CameraPreset;
   zoomStep: number;
+  displayMode: SceneDisplayMode;
   onSelectStructure: (id: string) => void;
 }
 
+interface MaterialFadeState {
+  material: THREE.Material;
+  opacity: number;
+  transparent: boolean;
+  depthWrite: boolean;
+}
+interface FadeRecord {
+  object: THREE.Object3D;
+  startedAt: number;
+  duration: number;
+  direction: 'in' | 'out';
+  materials: MaterialFadeState[];
+}
+interface CameraTween {
+  fromPosition: THREE.Vector3;
+  toPosition: THREE.Vector3;
+  fromTarget: THREE.Vector3;
+  toTarget: THREE.Vector3;
+  fromQuaternion: THREE.Quaternion;
+  toQuaternion: THREE.Quaternion;
+  startedAt: number;
+  duration: number;
+}
 interface SceneApi {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   objects: Map<string, THREE.Object3D>;
+  transitionRoot: THREE.Group;
+  fades: FadeRecord[];
+  cameraTween: CameraTween | null;
+  clock: THREE.Clock;
+  flowMarkers: Set<THREE.Mesh>;
+  flowPosition: THREE.Vector3;
+  flowDirection: THREE.Vector3;
+  flowAxis: THREE.Vector3;
+}
+const STAGE_TRANSITION_DURATION_MS = 720;
+const CAMERA_TRANSITION_DURATION_MS = 760;
+
+function collectMaterialFadeStates(object: THREE.Object3D): MaterialFadeState[] {
+  const states: MaterialFadeState[] = [];
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => states.push({
+      material, opacity: material.opacity, transparent: material.transparent, depthWrite: material.depthWrite
+    }));
+  });
+  return states;
+}
+function disposeObject(object: THREE.Object3D) {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry?.dispose();
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => material.dispose());
+  });
+}
+function clearGroup(
+  group: THREE.Group,
+  transitionRoot: THREE.Group,
+  fades: FadeRecord[],
+  flowMarkers: Set<THREE.Mesh>,
+  animate: boolean
+) {
+  // If the learner changes stages again mid-transition, let the current visual
+  // opacity become the starting point for the next fade instead of competing tweens.
+  for (let index = fades.length - 1; index >= 0; index -= 1) {
+    if (fades[index].object === group) fades.splice(index, 1);
+  }
+  const children = [...group.children];
+  children.forEach((child) => {
+    child.traverse((descendant) => {
+      const mesh = descendant as THREE.Mesh;
+      if (mesh.isMesh && mesh.userData.flowCurve) flowMarkers.delete(mesh);
+    });
+  });
+  const wasVisible = group.visible;
+  group.clear();
+  if (animate) {
+    if (children.length) {
+      const outgoing = new THREE.Group();
+      outgoing.name = `${group.name}-outgoing`;
+      outgoing.visible = wasVisible;
+      children.forEach((child) => outgoing.add(child));
+      transitionRoot.add(outgoing);
+      const materials = collectMaterialFadeStates(outgoing);
+      materials.forEach(({ material }) => {
+        material.transparent = true;
+        material.depthWrite = false;
+        material.needsUpdate = true;
+      });
+      fades.push({ object: outgoing, startedAt: performance.now(), duration: STAGE_TRANSITION_DURATION_MS, direction: 'out', materials });
+    }
+    group.userData.pendingFadeIn = true;
+    return;
+  }
+  group.userData.pendingFadeIn = false;
+  children.forEach(disposeObject);
+}
+function beginFadeIn(group: THREE.Object3D, fades: FadeRecord[], now: number) {
+  if (!group.userData.pendingFadeIn) return;
+  group.userData.pendingFadeIn = false;
+  const materials = collectMaterialFadeStates(group);
+  if (!materials.length) return;
+  materials.forEach(({ material }) => {
+    material.transparent = true;
+    material.depthWrite = false;
+    material.opacity = 0;
+    material.needsUpdate = true;
+  });
+  fades.push({ object: group, startedAt: now, duration: STAGE_TRANSITION_DURATION_MS, direction: 'in', materials });
+}
+function updateFadeTransitions(fades: FadeRecord[], transitionRoot: THREE.Group, now: number) {
+  for (let index = fades.length - 1; index >= 0; index -= 1) {
+    const fade = fades[index];
+    const progress = Math.min(1, Math.max(0, (now - fade.startedAt) / fade.duration));
+    const eased = progress * progress * (3 - 2 * progress);
+    const scale = fade.direction === 'in' ? eased : 1 - eased;
+    fade.materials.forEach((state) => { state.material.opacity = state.opacity * scale; });
+    if (progress < 1) continue;
+    if (fade.direction === 'in') {
+      fade.materials.forEach((state) => {
+        state.material.opacity = state.opacity;
+        state.material.transparent = state.transparent;
+        state.material.depthWrite = state.depthWrite;
+        state.material.needsUpdate = true;
+      });
+    } else {
+      transitionRoot.remove(fade.object);
+      disposeObject(fade.object);
+    }
+    fades.splice(index, 1);
+  }
+}
+function startCameraTween(api: SceneApi, position: THREE.Vector3, target: THREE.Vector3, up: THREE.Vector3, duration = CAMERA_TRANSITION_DURATION_MS) {
+  const targetCamera = new THREE.PerspectiveCamera();
+  targetCamera.position.copy(position);
+  targetCamera.up.copy(up);
+  targetCamera.lookAt(target);
+  api.cameraTween = {
+    fromPosition: api.camera.position.clone(), toPosition: position.clone(),
+    fromTarget: api.controls.target.clone(), toTarget: target.clone(),
+    fromQuaternion: api.camera.quaternion.clone(), toQuaternion: targetCamera.quaternion.clone(),
+    startedAt: performance.now(), duration
+  };
 }
 
 function tube(points: THREE.Vector3[], radius: number, color: string) {
+  const centreline = points.map((point) => [point.x, point.y, point.z] as Point3);
+  const refined = makeVesselMesh(centreline, radius, color, 0.94);
+  if (refined) return refined;
   const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
-  const tubularSegments = Math.max(VESSEL_RENDER_CONFIG.minTubularSegments, Math.min(160, Math.ceil(curve.getLength() * VESSEL_RENDER_CONFIG.samplesPerUnit)));
-  const geometry = new THREE.TubeGeometry(curve, tubularSegments, radius, VESSEL_RENDER_CONFIG.radialSegments, false);
+  const geometry = new THREE.TubeGeometry(curve, 96, radius, VESSEL_RENDER_CONFIG.radialSegments, false);
   const material = new THREE.MeshPhysicalMaterial({
-    color,
-    roughness: 0.46,
-    metalness: 0.01,
-    clearcoat: 0.16,
-    clearcoatRoughness: 0.42
+    color, roughness: SCENE_RENDER_TUNING.vesselRoughness, metalness: 0,
+    clearcoat: SCENE_RENDER_TUNING.vesselClearcoat
   });
-  return new THREE.Mesh(geometry, material);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function makeHollowOrganTube(
+  points: readonly Point3[], outerRadius: number, innerRadius: number, outerColor: string
+): THREE.Group {
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, 'centripetal');
+  const tubularSegments = Math.max(128, Math.min(240, Math.ceil(curve.getLength() * 30)));
+  const radialSegments = 40, ringSize = radialSegments + 1;
+  const frames = curve.computeFrenetFrames(tubularSegments, false);
+  const geometry = new THREE.BufferGeometry();
+  const positions: number[] = [], colors: number[] = [], indices: number[] = [];
+  const outerTint = new THREE.Color(outerColor), innerTint = new THREE.Color('#8b6558');
+  const minorAxisScale = 0.86;
+  for (let i = 0; i <= tubularSegments; i += 1) {
+    const t = i / tubularSegments;
+    const edge = Math.min(1, Math.min(t, 1 - t) / 0.12);
+    const profile = 0.94 + 0.06 * edge * edge * (3 - 2 * edge);
+    const center = curve.getPointAt(t);
+    for (let j = 0; j <= radialSegments; j += 1) {
+      const angle = (j / radialSegments) * Math.PI * 2;
+      const radial = frames.normals[i].clone().multiplyScalar(Math.cos(angle))
+        .addScaledVector(frames.binormals[i], Math.sin(angle) * minorAxisScale);
+      const outerPoint = center.clone().addScaledVector(radial, outerRadius * profile);
+      positions.push(outerPoint.x, outerPoint.y, outerPoint.z);
+      colors.push(outerTint.r, outerTint.g, outerTint.b);
+      const innerPoint = center.clone().addScaledVector(radial, innerRadius * profile);
+      positions.push(innerPoint.x, innerPoint.y, innerPoint.z);
+      colors.push(innerTint.r, innerTint.g, innerTint.b);
+    }
+  }
+  const stride = ringSize * 2;
+  for (let i = 0; i < tubularSegments; i += 1) {
+    for (let j = 0; j < radialSegments; j += 1) {
+      const a = i * stride + j * 2, b = (i + 1) * stride + j * 2, c = b + 2, d = a + 2;
+      indices.push(a, d, b, b, d, c);
+      const ai = a + 1, bi = b + 1, ci = c + 1, di = d + 1;
+      indices.push(ai, bi, di, bi, ci, di);
+    }
+  }
+  // Annular rims connect the mucosal and outer walls without closing the lumen.
+  for (let j = 0; j < radialSegments; j += 1) {
+    const so = j * 2, si = so + 1, son = so + 2, sin = son + 1;
+    indices.push(so, si, son, son, si, sin);
+    const eo = tubularSegments * stride + j * 2, ei = eo + 1, eon = eo + 2, ein = eon + 1;
+    indices.push(eo, eon, ei, eon, ein, ei);
+  }
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
+    vertexColors: true, roughness: 0.84, metalness: 0, clearcoat: 0.018, side: THREE.DoubleSide
+  }));
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  const group = new THREE.Group();
+  group.add(mesh);
+  return group;
 }
 
 function viewFor(preset: CameraPreset) {
@@ -62,46 +271,62 @@ function viewFor(preset: CameraPreset) {
   return views[preset];
 }
 
-function makeLiver() {
-  const geometry = new THREE.SphereGeometry(1, 72, 52);
+function makeLiver(stageId: VitellineStageId) {
+  const stageForm: Record<VitellineStageId, number> = { cs10: 0.04, cs12: 0.28, cs13: 0.72, cs14: 0.9, cs15: 1, cs16: 1 };
+  const form = stageForm[stageId];
+  const geometry = new THREE.SphereGeometry(1, 160, 112);
   const position = geometry.attributes.position as THREE.BufferAttribute;
   const vertex = new THREE.Vector3();
 
   for (let i = 0; i < position.count; i += 1) {
     vertex.fromBufferAttribute(position, i);
-    const x = vertex.x;
-    const y = vertex.y;
-    const z = vertex.z;
-    const rightLobe = x >= 0 ? 1.08 : 0.82;
-    const inferiorNotch = Math.exp(-(((x - 0.08) / 0.2) ** 2) - (((y + 0.62) / 0.18) ** 2));
-    const hilumIndent = Math.exp(-(((x - 0.02) / 0.28) ** 2) - (((y + 0.12) / 0.22) ** 2)) * Math.max(0, -z);
-    const surfaceRelief = 0.018 * Math.sin(3.2 * x + 0.5) * Math.cos(2.6 * y);
-    position.setXYZ(
-      i,
-      x * 1.58 * rightLobe + 0.07 * y,
-      y * 0.78 + inferiorNotch * 0.12,
-      z * (0.74 + surfaceRelief) + hilumIndent * 0.1
-    );
+    const x = vertex.x, y = vertex.y, z = vertex.z;
+    const dorsal = Math.max(0, z), ventral = Math.max(0, -z);
+    const leftWing = Math.exp(-(((x + 0.55) / 0.34) ** 2) - (((y - 0.02) / 0.58) ** 2)) * dorsal;
+    const rightWing = Math.exp(-(((x - 0.52) / 0.37) ** 2) - (((y - 0.02) / 0.6) ** 2)) * dorsal;
+    const medialGroove = Math.exp(-((x / 0.17) ** 2) - (((y - 0.04) / 0.62) ** 2)) * dorsal;
+    const ventromedialMass = Math.exp(-((x / 0.38) ** 2) - (((y + 0.18) / 0.46) ** 2)) * ventral;
+    const caudalNotch = Math.exp(-((x / 0.24) ** 2) - (((y + 0.5) / 0.19) ** 2)) * ventral;
+    const rightLobe = x >= 0 ? 1.13 : 0.86;
+    const upperExpansion = Math.exp(-(((y - 0.16) / 0.5) ** 2));
+    const hilarIndent = Math.exp(-(((x - 0.02) / 0.2) ** 2) - (((y + 0.02) / 0.16) ** 2)) * ventral;
+    const gallbladderFossa = Math.exp(-(((x - 0.36) / 0.18) ** 2) - (((y + 0.48) / 0.22) ** 2)) * ventral;
+    const dorsalRelief = Math.exp(-(((x - 0.38) / 0.26) ** 2) - (((y - 0.08) / 0.34) ** 2)) * dorsal;
+    const surfaceRelief = 0.012 * Math.sin(2.8 * x + 0.35) * Math.cos(2.2 * y)
+      + 0.006 * Math.sin(4.1 * y - 0.4 * x);
+    const caudalTaper = 1 - 0.13 * Math.max(0, -y) * (1 - 0.35 * Math.abs(x));
+    const wingVolume = form * (leftWing + rightWing);
+
+    const xPosition = x * 1.24 * rightLobe * caudalTaper
+      + 0.045 * form * (rightWing - leftWing);
+    const yPosition = y * 0.59 + 0.045 * wingVolume + 0.035 * form * ventromedialMass
+      + 0.025 * dorsalRelief + 0.012 * upperExpansion * form;
+    const depth = 0.43 + 0.1 * form + surfaceRelief + 0.12 * wingVolume
+      - 0.095 * form * medialGroove + 0.045 * form * ventromedialMass;
+    const zPosition = z * depth - 0.095 * form * hilarIndent
+      - 0.045 * gallbladderFossa - 0.035 * (1 - form) * caudalNotch;
+    position.setXYZ(i, xPosition, yPosition, zPosition);
   }
 
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
-    color: '#a96854',
-    roughness: 0.62,
+    color: '#95695e',
+    roughness: SCENE_RENDER_TUNING.organRoughness,
     metalness: 0,
-    clearcoat: 0.08,
+    clearcoat: SCENE_RENDER_TUNING.organClearcoat,
     transparent: true,
-    opacity: 0.27,
-    depthWrite: false,
-    side: THREE.DoubleSide
+    opacity: 0.24,
+    depthWrite: false
   }));
-  mesh.position.set(0, 1.4, 0.12);
-  mesh.renderOrder = 1;
+  mesh.position.set(0, 1.38, 0.16);
+  mesh.userData.anatomicalForm = 'stage-specific embryonic hepatic primordium';
+  mesh.castShadow = false;
+  mesh.receiveShadow = true;
   return mesh;
 }
 
 function makeEmbryoEnvelope() {
-  const geometry = new THREE.SphereGeometry(1, 80, 56);
+  const geometry = new THREE.SphereGeometry(1, 112, 80);
   const position = geometry.attributes.position as THREE.BufferAttribute;
   const vertex = new THREE.Vector3();
 
@@ -122,12 +347,12 @@ function makeEmbryoEnvelope() {
 
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
-    color: '#b58d85',
-    roughness: 0.78,
+    color: '#95827c',
+    roughness: 0.9,
     metalness: 0,
-    clearcoat: 0.04,
+    clearcoat: 0.01,
     transparent: true,
-    opacity: 0.075,
+    opacity: 0.035,
     depthWrite: false,
     side: THREE.DoubleSide
   }));
@@ -138,52 +363,53 @@ function makeEmbryoEnvelope() {
 
 function makeVenousPole() {
   const group = new THREE.Group();
-  const sac = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 56, 40),
-    new THREE.MeshPhysicalMaterial({
-      color: '#5689b8',
-      roughness: 0.38,
-      metalness: 0.01,
-      clearcoat: 0.22,
-      transparent: true,
-      opacity: 0.86
-    })
-  );
-  sac.scale.set(0.46, 0.31, 0.34);
-  sac.position.set(0.1, 2.82, 0.2);
-  group.add(sac);
-  group.add(tube([
-    new THREE.Vector3(-0.25, 2.82, 0.2),
-    new THREE.Vector3(-0.18, 2.84, 0.2),
-    new THREE.Vector3(-0.08, 2.85, 0.2),
-    new THREE.Vector3(0.1, 2.82, 0.2)
-  ], 0.105, '#5689b8'));
-  group.add(tube([
-    new THREE.Vector3(0.45, 2.82, 0.2),
-    new THREE.Vector3(0.36, 2.84, 0.2),
-    new THREE.Vector3(0.24, 2.85, 0.2),
-    new THREE.Vector3(0.1, 2.82, 0.2)
-  ], 0.105, '#5689b8'));
-  group.traverse((object) => {
-    if (object instanceof THREE.Mesh) object.userData.structureId = 'sinus-venosus';
-  });
+  const sinus = tube([
+    new THREE.Vector3(-0.48, 2.76, 0.2),
+    new THREE.Vector3(-0.38, 2.88, 0.18),
+    new THREE.Vector3(-0.2, 2.94, 0.16),
+    new THREE.Vector3(0, 2.96, 0.15),
+    new THREE.Vector3(0.2, 2.94, 0.16),
+    new THREE.Vector3(0.38, 2.88, 0.18),
+    new THREE.Vector3(0.48, 2.76, 0.2)
+  ], 0.112, '#668ca5');
+  sinus.scale.set(1, 0.9, 0.84);
+  sinus.userData.structureId = 'sinus-venosus';
+  group.add(sinus);
   return group;
 }
 
 function makeDorsalPancreaticBud() {
+  const geometry = new THREE.SphereGeometry(1, 64, 44);
+  const position = geometry.attributes.position as THREE.BufferAttribute;
+  const vertex = new THREE.Vector3();
+
+  for (let i = 0; i < position.count; i += 1) {
+    vertex.fromBufferAttribute(position, i);
+    const x = vertex.x;
+    const y = vertex.y;
+    const z = vertex.z;
+    const taper = 0.82 + 0.18 * (1 - Math.abs(x));
+    const lobulation = 1 + 0.055 * Math.sin(4.2 * x + 0.35) * Math.cos(2.6 * y);
+    position.setXYZ(
+      i,
+      x * 0.22 * 1.45 * taper,
+      y * 0.22 * 0.58 * lobulation + 0.012 * Math.sin(3.1 * x),
+      z * 0.22 * 0.78 * lobulation
+    );
+  }
+  geometry.computeVertexNormals();
+
   const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 28, 20),
-    new THREE.MeshStandardMaterial({
-      color: '#d9a46e',
-      roughness: 0.62,
+    geometry,
+    new THREE.MeshPhysicalMaterial({
+      color: '#c49b79',
+      roughness: 0.86,
+      clearcoat: 0.018,
       transparent: true,
-      opacity: 0.82,
-      depthWrite: false,
-      emissive: '#3b2411',
-      emissiveIntensity: 0.08
+      opacity: 0.72,
+      depthWrite: false
     })
   );
-  mesh.scale.set(1.45, 0.58, 0.78);
   mesh.position.set(
     INTERVITELLINE_LANDMARKS[0].position[0],
     INTERVITELLINE_LANDMARKS[0].position[1],
@@ -194,20 +420,24 @@ function makeDorsalPancreaticBud() {
 
 function makePortalGallbladder() {
   const landmark = PORTAL_LANDMARKS.find((item) => item.id === 'portal-gallbladder');
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.14, 24, 18),
-    new THREE.MeshStandardMaterial({
-      color: landmark?.color ?? '#a6b86d',
-      roughness: 0.58,
-      transparent: true,
-      opacity: 0.92,
-      emissive: '#263015',
-      emissiveIntensity: 0.12
-    })
-  );
-  mesh.scale.set(0.72, 1.48, 0.72);
-  const position = landmark?.position ?? [0.05, 1.13, -0.43];
-  mesh.position.set(position[0], position[1], position[2]);
+  const geometry = new THREE.SphereGeometry(1, 64, 48);
+  const positionAttribute = geometry.attributes.position as THREE.BufferAttribute;
+  const vertex = new THREE.Vector3();
+  for (let i = 0; i < positionAttribute.count; i += 1) {
+    vertex.fromBufferAttribute(positionAttribute, i);
+    const cranialNeck = Math.exp(-(((vertex.y - 0.76) / 0.19) ** 2));
+    const bodyBulge = 1 + 0.12 * Math.exp(-(((vertex.y + 0.12) / 0.52) ** 2));
+    const fundusToNeckTaper = 1 - 0.34 * ((vertex.y + 1) * 0.5);
+    const width = fundusToNeckTaper * bodyBulge * (1 - 0.28 * cranialNeck);
+    positionAttribute.setXYZ(i, vertex.x * 0.14 * 0.72 * width, vertex.y * 0.14 * 1.48, vertex.z * 0.14 * 0.72 * width);
+  }
+  geometry.computeVertexNormals();
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
+    color: '#87966d', roughness: 0.86, clearcoat: 0.015,
+    transparent: true, opacity: 0.82, depthWrite: false
+  }));
+  const landmarkPosition = landmark?.position ?? [0.05, 1.13, -0.43];
+  mesh.position.set(landmarkPosition[0], landmarkPosition[1], landmarkPosition[2]);
   return mesh;
 }
 
@@ -217,74 +447,78 @@ function highlight(object: THREE.Object3D, active: boolean) {
     if (!mesh.isMesh) return;
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     materials.forEach((material) => {
-      if (material instanceof THREE.MeshStandardMaterial) {
-        if (material.userData.baseColor === undefined) material.userData.baseColor = material.color.getHex();
-        material.color.setHex(active ? 0x8fc9ed : material.userData.baseColor);
-      }
+      if (!(material instanceof THREE.MeshStandardMaterial)) return;
+      if (material.userData.baseColor === undefined) material.userData.baseColor = material.color.getHex();
+      if (material.userData.baseEmissive === undefined) material.userData.baseEmissive = material.emissive.getHex();
+      if (material.userData.baseEmissiveIntensity === undefined) material.userData.baseEmissiveIntensity = material.emissiveIntensity;
+      const baseColor = new THREE.Color(material.userData.baseColor as number);
+      material.color.copy(active ? baseColor.clone().lerp(new THREE.Color('#edf2f4'), 0.24) : baseColor);
+      material.emissive.set(active ? baseColor.clone().multiplyScalar(0.1) : new THREE.Color(material.userData.baseEmissive as number));
+      material.emissiveIntensity = active
+        ? Math.max(material.userData.baseEmissiveIntensity as number, 0.08)
+        : material.userData.baseEmissiveIntensity as number;
     });
   });
 }
 
-function makeVesselMesh(
-  points: readonly Point3[],
-  radius: number,
-  color: string,
-  opacity: number
-): THREE.Mesh | null {
-  if (points.length < 2 || radius <= 0) return null;
-  const curvePoints = points.map(([x, y, z]) => new THREE.Vector3(x, y, z));
-  const curve = new THREE.CatmullRomCurve3(curvePoints, false, VESSEL_RENDER_CONFIG.curveType);
-  const length = curve.getLength();
-  const tubularSegments = Math.max(
-    VESSEL_RENDER_CONFIG.minTubularSegments,
-    Math.min(VESSEL_RENDER_CONFIG.maxTubularSegments, Math.ceil(length * VESSEL_RENDER_CONFIG.samplesPerUnit))
-  );
-  const radialSegments = VESSEL_RENDER_CONFIG.radialSegments;
-  const frames = curve.computeFrenetFrames(tubularSegments, false);
-  const positions: number[] = [];
-  const normals: number[] = [];
-  const uvs: number[] = [];
-  const indices: number[] = [];
+function setObjectOpacityScale(object: THREE.Object3D, scale: number) {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => {
+      if (material.userData.renderBaseOpacity === undefined) material.userData.renderBaseOpacity = material.opacity;
+      if (material.userData.renderBaseTransparent === undefined) material.userData.renderBaseTransparent = material.transparent;
+      if (material.userData.renderBaseDepthWrite === undefined) material.userData.renderBaseDepthWrite = material.depthWrite;
+      const baseOpacity = material.userData.renderBaseOpacity as number;
+      const baseTransparent = material.userData.renderBaseTransparent as boolean;
+      const baseDepthWrite = material.userData.renderBaseDepthWrite as boolean;
+      material.opacity = baseOpacity * scale;
+      material.transparent = baseTransparent || scale < 0.999;
+      material.depthWrite = scale < 0.999 ? false : baseDepthWrite;
+    });
+  });
+}
 
+interface VesselMeshOptions { capStart?: boolean; capEnd?: boolean; startTaper?: number; endTaper?: number; }
+function smooth01(value: number) { const t = Math.min(1, Math.max(0, value)); return t * t * (3 - 2 * t); }
+function makeVesselMesh(points: readonly Point3[], radius: number, color: string, opacity: number, options: VesselMeshOptions = {}): THREE.Mesh | null {
+  if (points.length < 2 || radius <= 0) return null;
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, VESSEL_RENDER_CONFIG.curveType);
+  const length = curve.getLength();
+  const tubularSegments = Math.max(VESSEL_RENDER_CONFIG.minTubularSegments, Math.min(VESSEL_RENDER_CONFIG.maxTubularSegments, Math.ceil(length * VESSEL_RENDER_CONFIG.samplesPerUnit)));
+  const radialSegments = VESSEL_RENDER_CONFIG.radialSegments, minorAxisScale = VESSEL_RENDER_CONFIG.minorAxisScale;
+  const frames = curve.computeFrenetFrames(tubularSegments, false);
+  const positions: number[] = [], normals: number[] = [], uvs: number[] = [], indices: number[] = [];
+  const startTaper = options.startTaper ?? 1, endTaper = options.endTaper ?? 1;
+  const capStart = options.capStart ?? true, capEnd = options.capEnd ?? true;
   for (let i = 0; i <= tubularSegments; i += 1) {
-    const t = i / tubularSegments;
-    const point = curve.getPointAt(t);
+    const t = i / tubularSegments, point = curve.getPointAt(t);
     const edgeFraction = Math.min(1, Math.min(t, 1 - t) / 0.12);
     const easedEdge = edgeFraction * edgeFraction * (3 - 2 * edgeFraction);
-    const endpointScale = VESSEL_RENDER_CONFIG.endpointRadiusScale
-      + (1 - VESSEL_RENDER_CONFIG.endpointRadiusScale) * easedEdge;
+    const endpointScale = VESSEL_RENDER_CONFIG.endpointRadiusScale + (1 - VESSEL_RENDER_CONFIG.endpointRadiusScale) * easedEdge;
+    const startProfile = startTaper + (1 - startTaper) * smooth01(t / 0.14);
+    const endProfile = endTaper + (1 - endTaper) * smooth01((1 - t) / 0.14);
     const midBulge = 1 + VESSEL_RENDER_CONFIG.midRadiusBoost * Math.sin(Math.PI * t) ** 2;
-    const localRadius = radius * endpointScale * midBulge;
-
+    const localRadius = radius * VESSEL_RENDER_CONFIG.globalRadiusScale * endpointScale * startProfile * endProfile * midBulge;
     for (let j = 0; j <= radialSegments; j += 1) {
-      const v = j / radialSegments;
-      const angle = v * Math.PI * 2;
-      const normal = frames.normals[i].clone().multiplyScalar(Math.cos(angle))
-        .addScaledVector(frames.binormals[i], Math.sin(angle)).normalize();
-      const vertex = point.clone().addScaledVector(normal, localRadius);
-      positions.push(vertex.x, vertex.y, vertex.z);
-      normals.push(normal.x, normal.y, normal.z);
-      uvs.push(t, v);
+      const v = j / radialSegments, angle = v * Math.PI * 2;
+      const cosine = Math.cos(angle), sine = Math.sin(angle);
+      const radial = frames.normals[i].clone().multiplyScalar(cosine).addScaledVector(frames.binormals[i], sine * minorAxisScale);
+      const vertex = point.clone().addScaledVector(radial, localRadius);
+      const normal = frames.normals[i].clone().multiplyScalar(cosine).addScaledVector(frames.binormals[i], sine / minorAxisScale).normalize();
+      positions.push(vertex.x, vertex.y, vertex.z); normals.push(normal.x, normal.y, normal.z); uvs.push(t, v);
     }
   }
-
-  for (let i = 0; i < tubularSegments; i += 1) {
-    for (let j = 0; j < radialSegments; j += 1) {
-      const a = i * (radialSegments + 1) + j;
-      const b = (i + 1) * (radialSegments + 1) + j;
-      const c = b + 1;
-      const d = a + 1;
-      indices.push(a, b, d, b, c, d);
-    }
+  for (let i = 0; i < tubularSegments; i += 1) for (let j = 0; j < radialSegments; j += 1) {
+    const a = i * (radialSegments + 1) + j, b = (i + 1) * (radialSegments + 1) + j, c = b + 1, d = a + 1;
+    indices.push(a, b, d, b, c, d);
   }
-
-  // Rounded end caps close open tube ends and soften connected graph junctions.
-  const addCap = (center: THREE.Vector3) => {
-    const cap = new THREE.SphereGeometry(radius * VESSEL_RENDER_CONFIG.endpointRadiusScale, radialSegments, 16);
-    cap.translate(center.x, center.y, center.z);
-    const capPositions = cap.attributes.position as THREE.BufferAttribute;
-    const capNormals = cap.attributes.normal as THREE.BufferAttribute;
-    const capUvs = cap.attributes.uv as THREE.BufferAttribute;
+  const appendHemisphere = (center: THREE.Vector3, outward: THREE.Vector3, capRadius: number) => {
+    const cap = new THREE.SphereGeometry(capRadius, radialSegments, Math.max(12, Math.floor(radialSegments / 2)), 0, Math.PI * 2, 0, Math.PI / 2);
+    const orientation = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), outward.clone().normalize());
+    cap.applyMatrix4(new THREE.Matrix4().compose(center, orientation, new THREE.Vector3(1, 1, 1)));
+    const capPositions = cap.attributes.position as THREE.BufferAttribute, capNormals = cap.attributes.normal as THREE.BufferAttribute, capUvs = cap.attributes.uv as THREE.BufferAttribute;
     const offset = positions.length / 3;
     for (let i = 0; i < capPositions.count; i += 1) {
       positions.push(capPositions.getX(i), capPositions.getY(i), capPositions.getZ(i));
@@ -292,87 +526,124 @@ function makeVesselMesh(
       uvs.push(capUvs.getX(i), capUvs.getY(i));
     }
     const capIndices = cap.index?.array;
-    if (capIndices) {
-      for (let i = 0; i < capIndices.length; i += 1) indices.push(capIndices[i] + offset);
-    }
+    if (capIndices) for (let i = 0; i < capIndices.length; i += 1) indices.push(capIndices[i] + offset);
     cap.dispose();
   };
-  addCap(curve.getPointAt(0));
-  addCap(curve.getPointAt(1));
-
+  const startRadius = radius * VESSEL_RENDER_CONFIG.globalRadiusScale * VESSEL_RENDER_CONFIG.endpointRadiusScale * startTaper;
+  const endRadius = radius * VESSEL_RENDER_CONFIG.globalRadiusScale * VESSEL_RENDER_CONFIG.endpointRadiusScale * endTaper;
+  if (capStart) appendHemisphere(curve.getPointAt(0), curve.getTangentAt(0).negate(), startRadius);
+  if (capEnd) appendHemisphere(curve.getPointAt(1), curve.getTangentAt(1), endRadius);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeBoundingSphere();
-
+  const vesselTint = new THREE.Color(color).lerp(new THREE.Color('#bac5ce'), 0.07);
   const material = new THREE.MeshPhysicalMaterial({
-    color,
+    color: vesselTint,
     roughness: VESSEL_RENDER_CONFIG.roughness,
-    metalness: 0.015,
+    metalness: 0,
     clearcoat: VESSEL_RENDER_CONFIG.clearcoat,
     clearcoatRoughness: VESSEL_RENDER_CONFIG.clearcoatRoughness,
     transparent: opacity < 0.98,
     opacity,
     depthWrite: opacity >= 0.98,
-    emissive: color,
-    emissiveIntensity: VESSEL_RENDER_CONFIG.emissiveIntensity
+    emissive: '#000000',
+    emissiveIntensity: 0
   });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
+  mesh.castShadow = opacity >= 0.9;
+  mesh.receiveShadow = true;
   return mesh;
 }
 
 function makeFlowArrow(points: readonly Point3[], color: string, radius: number): THREE.Mesh | null {
   if (points.length < 2) return null;
-  const curve = new THREE.CatmullRomCurve3(
-    points.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-    false,
-    VESSEL_RENDER_CONFIG.curveType
-  );
-  const position = curve.getPointAt(0.72);
-  const direction = curve.getTangentAt(0.72).normalize();
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, VESSEL_RENDER_CONFIG.curveType);
+  const position = curve.getPointAt(0.72), direction = curve.getTangentAt(0.72).normalize();
   if (direction.lengthSq() < 1e-8) return null;
-  const height = Math.max(radius * 2.5, 0.065);
+  const height = Math.max(radius * 1.28, 0.026);
   const arrow = new THREE.Mesh(
-    new THREE.ConeGeometry(Math.max(radius * 1.35, 0.022), height, 16, 1),
+    new THREE.ConeGeometry(Math.max(radius * 0.62, 0.012), height, 10, 1),
     new THREE.MeshPhysicalMaterial({
-      color,
-      roughness: 0.34,
-      metalness: 0.01,
-      clearcoat: 0.24,
-      emissive: color,
-      emissiveIntensity: 0.08
+      color: new THREE.Color(color).lerp(new THREE.Color('#c5cdd2'), 0.1),
+      roughness: 0.72, metalness: 0, clearcoat: 0.025
     })
   );
-  arrow.position.copy(position).addScaledVector(direction, height * 0.12);
+  arrow.position.copy(position).addScaledVector(direction, height * 0.08);
   arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+  arrow.userData.flowCurve = curve;
+  arrow.userData.flowSpeed = 0.095;
+  arrow.userData.flowOffset = (Math.abs(points[0][0]) * 0.173 + points.length * 0.071) % 1;
   return arrow;
 }
 
-function clearGroup(group: THREE.Group) {
-  const children = [...group.children];
-  group.clear();
-  children.forEach((child) => {
-    child.traverse((object) => {
-      const mesh = object as THREE.Mesh;
-      if (mesh.geometry) mesh.geometry.dispose();
-      if (mesh.material) {
-        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        materials.forEach((material) => material.dispose());
-      }
+interface JunctionPath { fromNode: string; toNode: string; points: readonly Point3[]; radiusScale?: number; }
+interface JunctionRecord { position: Point3; degree: number; radiusScale: number; }
+function collectVascularJunctions(paths: readonly JunctionPath[]) {
+  const junctions = new Map<string, JunctionRecord>();
+  paths.forEach((path) => {
+    if (path.points.length < 2) return;
+    const endpoints: [string, Point3][] = [[path.fromNode, path.points[0]], [path.toNode, path.points[path.points.length - 1]]];
+    endpoints.forEach(([nodeId, position]) => {
+      const current = junctions.get(nodeId);
+      if (current) { current.degree += 1; current.radiusScale = Math.max(current.radiusScale, path.radiusScale ?? 1); }
+      else junctions.set(nodeId, { position, degree: 1, radiusScale: path.radiusScale ?? 1 });
     });
+  });
+  return junctions;
+}
+function vesselMeshOptions(path: JunctionPath, junctions: Map<string, JunctionRecord>): VesselMeshOptions {
+  const startDegree = junctions.get(path.fromNode)?.degree ?? 1, endDegree = junctions.get(path.toNode)?.degree ?? 1;
+  const taperFor = (degree: number) => degree >= 3 ? 0.84 : degree === 2 ? 0.95 : 1;
+  return { capStart: startDegree === 1, capEnd: endDegree === 1, startTaper: taperFor(startDegree), endTaper: taperFor(endDegree) };
+}
+function sameCentreline(a: readonly Point3[], b: readonly Point3[]) {
+  return a.length === b.length && a.every((point, index) =>
+    Math.abs(point[0] - b[index][0]) < 1e-6 && Math.abs(point[1] - b[index][1]) < 1e-6 && Math.abs(point[2] - b[index][2]) < 1e-6
+  );
+}
+function collectActiveJunctions(stageId: VitellineStageId, profile: EvidenceProfile, cardinalModel: CardinalModel) {
+  const activePaths: JunctionPath[] = [];
+  VITELLINE_SEGMENTS.forEach((segment) => {
+    const p = getVesselPresentation(segment, profile, stageId);
+    if (p.visible && p.paths.length === 1 && sameCentreline(p.paths[0], segment.points)) activePaths.push(segment);
+  });
+  HEPATIC_VASCULAR_LAYERS.forEach((layer) => { if (getHepaticLayerPresentation(layer, profile, stageId).visible) activePaths.push(...layer.paths); });
+  HEPATIC_OUTFLOW_LAYERS.forEach((layer) => { if (getHepaticOutflowPresentation(layer, profile, stageId).visible) activePaths.push(...layer.paths); });
+  INTERVITELLINE_ANASTOMOSES.forEach((item) => { if (getIntervitellinePresentation(item, profile, stageId).visible) activePaths.push(item); });
+  PORTAL_VASCULAR_LAYERS.forEach((layer) => { if (getPortalLayerPresentation(layer, profile, stageId).visible) activePaths.push(...layer.paths); });
+  UMBILICAL_VASCULAR_LAYERS.forEach((layer) => { if (getUmbilicalLayerPresentation(layer, profile, stageId).visible) activePaths.push(...layer.paths); });
+  CARDINAL_VASCULAR_LAYERS.forEach((layer) => { if (getCardinalLayerPresentation(layer, cardinalModel, stageId).visible) activePaths.push(...layer.paths); });
+  return collectVascularJunctions(activePaths);
+}
+function addVascularJunctions(group: THREE.Group, paths: readonly JunctionPath[], baseRadius: number, color: string, opacity: number) {
+  const junctions = collectVascularJunctions(paths);
+  junctions.forEach((junction, nodeId) => {
+    if (junction.degree < 3) return;
+    const radius = baseRadius * VESSEL_RENDER_CONFIG.globalRadiusScale * Math.min(1.12, junction.radiusScale) * 0.54;
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 28, 18), new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(color).lerp(new THREE.Color('#b9c4cb'), 0.06),
+      roughness: 0.64, metalness: 0, clearcoat: 0.025,
+      transparent: opacity < 0.98, opacity: Math.min(opacity, 0.84), depthWrite: false,
+      emissive: '#000000', emissiveIntensity: 0
+    }));
+    mesh.position.set(junction.position[0], junction.position[1], junction.position[2]);
+    mesh.userData.structureId = group.userData.structureId ?? group.name;
+    mesh.userData.junctionNodeId = nodeId;
+    group.add(mesh);
   });
 }
 
 export default function EmbryoScene({
-  stage, profile, cardinalModel, visibleLayers, selectedStructure, cameraPreset, zoomStep, onSelectStructure
+  stage, profile, cardinalModel, visibleLayers, selectedStructure, cameraPreset, zoomStep, displayMode, onSelectStructure
 }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const zoomStepRef = useRef(0);
+  const stageChangePendingRef = useRef(false);
+  const previousStageKeyRef = useRef<string | null>(null);
   const selectRef = useRef(onSelectStructure);
   selectRef.current = onSelectStructure;
 
@@ -381,20 +652,31 @@ export default function EmbryoScene({
     if (!mount) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#07111f');
-    scene.fog = new THREE.Fog('#07111f', 18, 36);
+    const transitionRoot = new THREE.Group();
+    transitionRoot.name = 'stage-transition-layer';
+    scene.add(transitionRoot);
+    scene.background = null;
+    scene.fog = new THREE.FogExp2(SCENE_RENDER_TUNING.background, SCENE_RENDER_TUNING.fogDensity);
 
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
     camera.position.set(6.2, 4.1, -7.2);
     camera.lookAt(0, 0.45, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = SCENE_RENDER_TUNING.toneMappingExposure;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(SCENE_RENDER_TUNING.background, 0);
     renderer.domElement.className = 'embryo-canvas';
     mount.appendChild(renderer.domElement);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const environmentTarget = pmremGenerator.fromScene(new RoomEnvironment(), 0.04);
+    scene.environment = environmentTarget.texture;
+    pmremGenerator.dispose();
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -403,35 +685,67 @@ export default function EmbryoScene({
     controls.maxDistance = 18;
     controls.target.set(0, 0.45, 0);
 
-    scene.add(new THREE.HemisphereLight('#d7e9ff', '#182332', 1.45));
-    const key = new THREE.DirectionalLight('#fff0dc', 2.25);
-    key.position.set(-4, 7, -5);
+    const hemisphere = new THREE.HemisphereLight(
+      SCENE_RENDER_TUNING.hemisphereSky,
+      SCENE_RENDER_TUNING.hemisphereGround,
+      SCENE_RENDER_TUNING.hemisphereIntensity
+    );
+    scene.add(hemisphere);
+
+    const key = new THREE.DirectionalLight(SCENE_RENDER_TUNING.keyColor, SCENE_RENDER_TUNING.keyIntensity);
+    key.position.set(-4.5, 7.5, -5.5);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.camera.near = 0.5;
+    key.shadow.camera.far = 16;
+    key.shadow.camera.left = -4.5;
+    key.shadow.camera.right = 4.5;
+    key.shadow.camera.top = 4.5;
+    key.shadow.camera.bottom = -4.5;
+    key.shadow.bias = -0.00012;
+    key.shadow.radius = 4;
     scene.add(key);
-    const rim = new THREE.DirectionalLight('#6da8d8', 1.15);
-    rim.position.set(5, 3, 5);
+
+    const fill = new THREE.DirectionalLight(SCENE_RENDER_TUNING.fillColor, SCENE_RENDER_TUNING.fillIntensity);
+    fill.position.set(6, 3.5, 5);
+    scene.add(fill);
+
+    const rim = new THREE.DirectionalLight(SCENE_RENDER_TUNING.rimColor, SCENE_RENDER_TUNING.rimIntensity);
+    rim.position.set(-5, 5.5, 7);
     scene.add(rim);
 
     const objects = new Map<string, THREE.Object3D>();
     const add = (id: string, object: THREE.Object3D) => {
       object.name = id;
       object.userData.structureId = id;
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          if (typeof child.userData.structureId !== 'string') child.userData.structureId = id;
+          child.receiveShadow = true;
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          child.castShadow = materials.some((material) => material.opacity >= 0.9 && !material.transparent);
+        }
+      });
       scene.add(object);
       objects.set(id, object);
     };
 
     add('embryo-envelope', makeEmbryoEnvelope());
-    add('liver', makeLiver());
+    const liverGroup = new THREE.Group();
+    liverGroup.userData.geometryStage = stage.id;
+    liverGroup.add(makeLiver(stage.id as VitellineStageId));
+    add('liver', liverGroup);
 
-    add('duodenum', tube([
-      new THREE.Vector3(-0.82, 0.94, -0.18),
-      new THREE.Vector3(-0.48, 0.58, -0.18),
-      new THREE.Vector3(-0.02, 0.24, -0.1),
-      new THREE.Vector3(0.55, 0.02, -0.02),
-      new THREE.Vector3(0.88, -0.34, 0.08),
-      new THREE.Vector3(0.7, -0.78, 0.1),
-      new THREE.Vector3(0.25, -1.02, 0.04),
-      new THREE.Vector3(-0.22, -0.91, -0.02)
-    ], 0.145, '#dcae7a'));
+    add('duodenum', makeHollowOrganTube([
+      [-0.82, 0.94, -0.18],
+      [-0.48, 0.58, -0.18],
+      [-0.02, 0.24, -0.1],
+      [0.55, 0.02, -0.02],
+      [0.88, -0.34, 0.08],
+      [0.7, -0.78, 0.1],
+      [0.25, -1.02, 0.04],
+      [-0.22, -0.91, -0.02]
+    ], 0.118, 0.094, '#c9a48b'));
 
     add('dorsal-pancreatic-bud', makeDorsalPancreaticBud());
     add('portal-gallbladder', makePortalGallbladder());
@@ -446,33 +760,33 @@ export default function EmbryoScene({
 
     const yolkGeometry = new THREE.SphereGeometry(1, 64, 44);
     const yolk = new THREE.Mesh(yolkGeometry, new THREE.MeshPhysicalMaterial({
-      color: '#c6a56e',
-      roughness: 0.7,
+      color: '#aa956f',
+      roughness: 0.9,
       metalness: 0,
-      clearcoat: 0.06,
+      clearcoat: 0.01,
       transparent: true,
-      opacity: 0.32,
+      opacity: 0.22,
       depthWrite: false,
       side: THREE.DoubleSide
     }));
-    yolk.scale.set(1.02, 0.8, 0.55);
-    yolk.position.set(0, -2.18, -0.34);
+    yolk.scale.set(0.78, 0.58, 0.42);
+    yolk.position.set(0, -2.2, -0.38);
     yolk.renderOrder = -1;
     add('yolk-sac', yolk);
 
     const placenta = new THREE.Mesh(
       new THREE.SphereGeometry(1, 56, 36),
       new THREE.MeshPhysicalMaterial({
-        color: '#a97888',
-        roughness: 0.72,
-        clearcoat: 0.04,
+        color: '#8d7480',
+        roughness: 0.9,
+        clearcoat: 0.01,
         transparent: true,
-        opacity: 0.38,
+        opacity: 0.2,
         depthWrite: false
       })
     );
-    placenta.scale.set(1.05, 0.25, 0.18);
-    placenta.position.set(0, -2.62, -0.9);
+    placenta.scale.set(0.78, 0.16, 0.12);
+    placenta.position.set(0, -2.58, -0.88);
     placenta.renderOrder = -1;
     add('placenta', placenta);
 
@@ -521,19 +835,43 @@ export default function EmbryoScene({
 
     add('sinus-venosus', makeVenousPole());
 
+    const septumGeometry = new THREE.SphereGeometry(1, 88, 56);
+    const septumPosition = septumGeometry.attributes.position as THREE.BufferAttribute;
+    const septumVertex = new THREE.Vector3();
+    for (let i = 0; i < septumPosition.count; i += 1) {
+      septumVertex.fromBufferAttribute(septumPosition, i);
+      const x = septumVertex.x, y = septumVertex.y, z = septumVertex.z;
+      const medialNotch = Math.exp(-((x / 0.22) ** 2) - ((z / 0.36) ** 2));
+      const lateralRise = 0.045 * x * x;
+      const shallowSaddle = 0.035 * Math.cos(x * Math.PI * 0.82);
+      septumPosition.setXYZ(
+        i,
+        x * 1.48,
+        y * (0.035 + 0.012 * (1 - Math.abs(x))) + lateralRise + shallowSaddle - medialNotch * 0.018,
+        z * 0.48 + 0.035 * x * x
+      );
+    }
+    septumGeometry.computeVertexNormals();
     const septum = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 40, 20),
-      new THREE.MeshStandardMaterial({
-        color: '#6f9c8a', transparent: true, opacity: 0.22,
-        depthWrite: false, side: THREE.DoubleSide
+      septumGeometry,
+      new THREE.MeshPhysicalMaterial({
+        color: '#87958a',
+        roughness: 0.92,
+        clearcoat: 0.008,
+        transparent: true,
+        opacity: 0.1,
+        depthWrite: false,
+        side: THREE.DoubleSide
       })
     );
-    septum.scale.set(2.05, 0.12, 0.72);
-    septum.position.set(0, 2.0, 0.48);
+    septum.position.set(0, 1.98, 0.48);
+    septum.receiveShadow = true;
+
     add('transverse-septum', septum);
 
-    const axes = new THREE.AxesHelper(1.1);
+    const axes = new THREE.AxesHelper(0.82);
     axes.position.set(-3.05, -1.72, 0.3);
+    axes.visible = false;
     add('orientation-axes', axes);
 
     VITELLINE_SEGMENTS.forEach((segment) => {
@@ -558,14 +896,17 @@ export default function EmbryoScene({
       add(layer.id, new THREE.Group());
     });
 
-    const grid = new THREE.GridHelper(12, 24, '#1d3448', '#132538');
-    grid.position.y = -3.1;
-    const gridMaterial = grid.material as THREE.Material;
-    gridMaterial.transparent = true;
-    gridMaterial.opacity = 0.11;
-    scene.add(grid);
+    // The specimen is presented without a modelling-grid floor.
 
-    apiRef.current = { camera, controls, objects };
+    const fades: FadeRecord[] = [];
+    const clock = new THREE.Clock();
+    const flowMarkers = new Set<THREE.Mesh>();
+    apiRef.current = {
+      camera, controls, objects, transitionRoot, fades, cameraTween: null, clock, flowMarkers,
+      flowPosition: new THREE.Vector3(),
+      flowDirection: new THREE.Vector3(),
+      flowAxis: new THREE.Vector3(0, 1, 0)
+    };
 
     const resize = () => {
       const width = Math.max(mount.clientWidth, 1);
@@ -601,6 +942,66 @@ export default function EmbryoScene({
     let frame = 0;
     const render = () => {
       frame = window.requestAnimationFrame(render);
+      const api = apiRef.current;
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const now = performance.now();
+
+      if (api) {
+        api.objects.forEach((object) => {
+          beginFadeIn(object, api.fades, now);
+          const targetScale = object.userData.targetScale;
+          if (typeof targetScale === 'number') {
+            const alpha = 1 - Math.exp(-6 * delta);
+            const nextScale = object.scale.x + (targetScale - object.scale.x) * alpha;
+            object.scale.setScalar(Math.abs(targetScale - nextScale) < 0.001 ? targetScale : nextScale);
+          }
+        });
+        updateFadeTransitions(api.fades, api.transitionRoot, now);
+        if (api.cameraTween) {
+          const tween = api.cameraTween;
+          const progress = Math.min(1, Math.max(0, (now - tween.startedAt) / tween.duration));
+          const eased = progress * progress * (3 - 2 * progress);
+          const target = tween.fromTarget.clone().lerp(tween.toTarget, eased);
+          const fromOffset = tween.fromPosition.clone().sub(tween.fromTarget);
+          const toOffset = tween.toPosition.clone().sub(tween.toTarget);
+          const fromRadius = fromOffset.length();
+          const toRadius = toOffset.length();
+          const fromDirection = fromOffset.normalize();
+          const toDirection = toOffset.normalize();
+          const rotation = new THREE.Quaternion().setFromUnitVectors(fromDirection, toDirection);
+          const direction = fromDirection.clone()
+            .applyQuaternion(new THREE.Quaternion().identity().slerp(rotation, eased))
+            .normalize();
+          const radius = fromRadius + (toRadius - fromRadius) * eased;
+          controls.target.copy(target);
+          camera.position.copy(target).addScaledVector(direction, radius);
+          camera.quaternion.copy(tween.fromQuaternion).slerp(tween.toQuaternion, eased);
+          camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
+          if (progress >= 1) {
+            camera.position.copy(tween.toPosition);
+            controls.target.copy(tween.toTarget);
+            camera.quaternion.copy(tween.toQuaternion);
+            camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
+            api.cameraTween = null;
+          }
+        }
+      }
+
+      const elapsed = clock.elapsedTime;
+      if (api) {
+        api.flowMarkers.forEach((mesh) => {
+          const curve = mesh.userData.flowCurve as THREE.CatmullRomCurve3;
+          const offset = mesh.userData.flowOffset as number;
+          const speed = mesh.userData.flowSpeed as number;
+          const phase = (elapsed * speed + offset) % 1;
+          const progress = 0.08 + phase * 0.84;
+          curve.getPointAt(progress, api.flowPosition);
+          curve.getTangentAt(progress, api.flowDirection).normalize();
+          mesh.position.copy(api.flowPosition).addScaledVector(api.flowDirection, 0.02);
+          mesh.quaternion.setFromUnitVectors(api.flowAxis, api.flowDirection);
+          mesh.scale.setScalar(0.92 + 0.08 * Math.sin(elapsed * 4.5 + offset * Math.PI * 2));
+        });
+      }
       controls.update();
       renderer.render(scene, camera);
     };
@@ -619,11 +1020,19 @@ export default function EmbryoScene({
           materials.forEach((material) => material.dispose());
         }
       });
+      environmentTarget.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === mount) mount.removeChild(renderer.domElement);
       apiRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const nextKey = `${stage.id}:${profile}:${cardinalModel}`;
+    stageChangePendingRef.current = previousStageKeyRef.current !== null
+      && previousStageKeyRef.current !== nextKey;
+    previousStageKeyRef.current = nextKey;
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -646,72 +1055,73 @@ export default function EmbryoScene({
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     VITELLINE_SEGMENTS.forEach((segment) => {
       const group = api.objects.get(segment.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getVesselPresentation(segment, profile, stageId);
-      group.visible = (visibleLayers[segment.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       presentation.paths.forEach((path) => {
-        const mesh = makeVesselMesh(
-          path,
-          segment.radius * presentation.radiusScale,
-          segment.color,
-          presentation.opacity
-        );
+        const originalPath = presentation.paths.length === 1 && sameCentreline(path, segment.points);
+        const mesh = makeVesselMesh(path, segment.radius * presentation.radiusScale, segment.color, presentation.opacity,
+          originalPath ? vesselMeshOptions(segment, activeJunctions) : undefined);
         if (!mesh) return;
         mesh.userData.structureId = segment.id;
         group.add(mesh);
       });
-      highlight(group, segment.id === selectedStructure);
+      // Selection highlighting is handled separately; do not rebuild geometry for a selection change.
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     HEPATIC_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getHepaticLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
+      const layerRadiusScale = layer.kind === 'sinusoid' ? 0.62 : 1;
+      const layerOpacity = layer.kind === 'sinusoid' ? presentation.opacity * 0.7 : presentation.opacity;
       layer.paths.forEach((pathItem) => {
         const mesh = makeVesselMesh(
-          pathItem.points,
-          layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1),
-          layer.color,
-          presentation.opacity
+          pathItem.points, layer.radius * presentation.radiusScale * layerRadiusScale * (pathItem.radiusScale ?? 1),
+          layer.color, layerOpacity, vesselMeshOptions(pathItem, activeJunctions)
         );
         if (!mesh) return;
         mesh.userData.structureId = layer.id;
         mesh.userData.pathId = pathItem.id;
         group.add(mesh);
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale * layerRadiusScale, layer.color, layerOpacity);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     HEPATIC_OUTFLOW_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getHepaticOutflowPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
         const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
-        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity,
+          vesselMeshOptions(pathItem, activeJunctions));
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
@@ -723,83 +1133,85 @@ export default function EmbryoScene({
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
             group.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     INTERVITELLINE_ANASTOMOSES.forEach((item) => {
       const group = api.objects.get(item.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getIntervitellinePresentation(item, profile, stageId);
-      group.visible = (visibleLayers[item.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       const mesh = makeVesselMesh(
         item.points,
         item.radius * presentation.radiusScale,
         item.color,
-        presentation.opacity
+        presentation.opacity,
+        vesselMeshOptions(item, activeJunctions)
       );
       if (mesh) {
         mesh.userData.structureId = item.id;
         mesh.userData.anastomosisId = item.id;
         group.add(mesh);
       }
-      highlight(group, item.id === selectedStructure);
+      // Selection highlighting is handled separately; do not rebuild geometry for a selection change.
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     PORTAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getPortalLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
-        const mesh = makeVesselMesh(
-          pathItem.points,
-          layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1),
-          layer.color,
-          presentation.opacity
-        );
+        const mesh = makeVesselMesh(pathItem.points, layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1),
+          layer.color, presentation.opacity, vesselMeshOptions(pathItem, activeJunctions));
         if (!mesh) return;
         mesh.userData.structureId = layer.id;
         mesh.userData.pathId = pathItem.id;
         group.add(mesh);
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getUmbilicalLayerPresentation(layer, profile, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
         const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
-        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity,
+          vesselMeshOptions(pathItem, activeJunctions));
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
@@ -811,28 +1223,31 @@ export default function EmbryoScene({
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
             group.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, profile, visibleLayers, selectedStructure]);
+  }, [stage.id, profile]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const activeJunctions = collectActiveJunctions(stageId, profile, cardinalModel);
     CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
       const group = api.objects.get(layer.id) as THREE.Group | undefined;
       if (!group) return;
-      clearGroup(group);
+      clearGroup(group, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
       const presentation = getCardinalLayerPresentation(layer, cardinalModel, stageId);
-      group.visible = (visibleLayers[layer.id] ?? true) && presentation.visible;
+      group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
       layer.paths.forEach((pathItem) => {
         const radius = layer.radius * presentation.radiusScale * (pathItem.radiusScale ?? 1);
-        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity);
+        const mesh = makeVesselMesh(pathItem.points, radius, layer.color, presentation.opacity,
+          vesselMeshOptions(pathItem, activeJunctions));
         if (mesh) {
           mesh.userData.structureId = layer.id;
           mesh.userData.pathId = pathItem.id;
@@ -844,49 +1259,120 @@ export default function EmbryoScene({
             arrow.userData.structureId = layer.id;
             arrow.userData.pathId = pathItem.id;
             group.add(arrow);
+            api.flowMarkers.add(arrow);
           }
         }
       });
-      highlight(group, layer.id === selectedStructure);
+      addVascularJunctions(group, layer.paths, layer.radius * presentation.radiusScale, layer.color, presentation.opacity);
     });
-  }, [stage, cardinalModel, visibleLayers, selectedStructure]);
+  }, [stage.id, profile, cardinalModel]);
+
+  useEffect(() => {
+    stageChangePendingRef.current = false;
+  }, [stage.id, profile, cardinalModel]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
-    UMBILICAL_VASCULAR_LAYERS.forEach((layer) => {
-      const group = api.objects.get(layer.id);
-      if (group) group.visible = (visibleLayers[layer.id] ?? true) && getUmbilicalLayerPresentation(layer, profile, stageId).visible;
-    });
-    CARDINAL_VASCULAR_LAYERS.forEach((layer) => {
-      const group = api.objects.get(layer.id);
-      if (group) group.visible = (visibleLayers[layer.id] ?? true) && getCardinalLayerPresentation(layer, cardinalModel, stageId).visible;
-    });
+    const fineNetworkIds = new Set(
+      HEPATIC_VASCULAR_LAYERS.filter((layer) => layer.kind === 'sinusoid').map((layer) => layer.id)
+    );
+    const setLayerVisibility = (id: string, presentationVisible: boolean) => {
+      const group = api.objects.get(id);
+      if (!group) return;
+      const fineNetwork = fineNetworkIds.has(id);
+      const modeVisible = !fineNetwork || displayMode !== 'clean' || id === selectedStructure;
+      group.visible = (visibleLayers[id] ?? true) && presentationVisible && modeVisible;
+      setObjectOpacityScale(group, fineNetwork && displayMode === 'teaching'
+        ? SCENE_RENDER_TUNING.sinusoidTeachingOpacity : 1);
+    };
+
+    VITELLINE_SEGMENTS.forEach((segment) =>
+      setLayerVisibility(segment.id, getVesselPresentation(segment, profile, stageId).visible)
+    );
+    HEPATIC_VASCULAR_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getHepaticLayerPresentation(layer, profile, stageId).visible)
+    );
+    HEPATIC_OUTFLOW_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getHepaticOutflowPresentation(layer, profile, stageId).visible)
+    );
+    INTERVITELLINE_ANASTOMOSES.forEach((item) =>
+      setLayerVisibility(item.id, getIntervitellinePresentation(item, profile, stageId).visible)
+    );
+    PORTAL_VASCULAR_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getPortalLayerPresentation(layer, profile, stageId).visible)
+    );
+    UMBILICAL_VASCULAR_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getUmbilicalLayerPresentation(layer, profile, stageId).visible)
+    );
+    CARDINAL_VASCULAR_LAYERS.forEach((layer) =>
+      setLayerVisibility(layer.id, getCardinalLayerPresentation(layer, cardinalModel, stageId).visible)
+    );
+
     const mesonephrosVisible = ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
-    for (const id of ['mesonephros-right', 'mesonephros-left']) {
+    const pancreasVisible = ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
+    const gallbladderVisible = ['cs14', 'cs15', 'cs16'].includes(stage.id);
+    const contextIds = new Set([
+      'embryo-envelope', 'yolk-sac', 'placenta', 'umbilical-cord',
+      'transverse-septum', 'dorsal-aorta', 'mesonephros-right',
+      'mesonephros-left', 'orientation-axes'
+    ]);
+    const staticVisibility: Record<string, boolean> = {
+      'embryo-envelope': true,
+      liver: true,
+      duodenum: true,
+      'dorsal-pancreatic-bud': pancreasVisible,
+      'portal-gallbladder': gallbladderVisible,
+      foregut: true,
+      'yolk-sac': true,
+      placenta: true,
+      'umbilical-cord': true,
+      'dorsal-aorta': true,
+      'mesonephros-right': mesonephrosVisible,
+      'mesonephros-left': mesonephrosVisible,
+      'sinus-venosus': true,
+      'transverse-septum': true,
+      'orientation-axes': displayMode === 'network'
+    };
+    const contextOpacity = displayMode === 'teaching'
+      ? SCENE_RENDER_TUNING.contextTeachingOpacity
+      : displayMode === 'network' ? SCENE_RENDER_TUNING.contextNetworkOpacity : 1;
+    Object.entries(staticVisibility).forEach(([id, stageVisible]) => {
       const object = api.objects.get(id);
-      if (object) object.visible = (visibleLayers[id] ?? true) && mesonephrosVisible;
+      if (!object) return;
+      const isContext = contextIds.has(id);
+      const selected = id === selectedStructure;
+      const modeVisible = displayMode !== 'clean' || !isContext || selected;
+      object.visible = (visibleLayers[id] ?? true) && stageVisible && modeVisible;
+      setObjectOpacityScale(object, isContext && !selected ? contextOpacity : 1);
+    });
+    const liver = api.objects.get('liver') as THREE.Group | undefined;
+    if (liver && liver.userData.geometryStage !== stage.id) {
+      clearGroup(liver, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
+      liver.add(makeLiver(stageId));
+      liver.userData.geometryStage = stage.id;
     }
-    api.objects.get('liver')?.scale.setScalar(stage.liverScale);
-    api.objects.get('duodenum')?.scale.setScalar(stage.duodenumScale);
+    if (liver) liver.userData.targetScale = stage.liverScale;
+    const duodenum = api.objects.get('duodenum');
+    if (duodenum) duodenum.userData.targetScale = stage.duodenumScale;
     const pancreas = api.objects.get('dorsal-pancreatic-bud');
     if (pancreas) {
-      pancreas.visible = (visibleLayers['dorsal-pancreatic-bud'] ?? true)
-        && ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
+      pancreas.visible = (visibleLayers['dorsal-pancreatic-bud'] ?? true) && pancreasVisible
+        && (displayMode !== 'clean' || selectedStructure === 'dorsal-pancreatic-bud');
     }
     const gallbladder = api.objects.get('portal-gallbladder');
     if (gallbladder) {
-      gallbladder.visible = (visibleLayers['portal-gallbladder'] ?? true)
-        && ['cs14', 'cs15', 'cs16'].includes(stage.id);
+      gallbladder.visible = (visibleLayers['portal-gallbladder'] ?? true) && gallbladderVisible;
     }
-  }, [stage, visibleLayers]);
+    api.flowMarkers.forEach((marker) => { marker.visible = displayMode !== 'clean'; });
+  }, [stage.id, profile, cardinalModel, visibleLayers, displayMode, selectedStructure]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     api.objects.forEach((object, id) => highlight(object, id === selectedStructure));
-  }, [selectedStructure]);
+  }, [selectedStructure, stage.id, profile, cardinalModel, displayMode]);
 
   useEffect(() => {
     const api = apiRef.current;
@@ -895,8 +1381,9 @@ export default function EmbryoScene({
       return;
     }
     const zoomRatio = Math.pow(0.9, zoomStep - zoomStepRef.current);
-    api.camera.position.sub(api.controls.target).multiplyScalar(zoomRatio).add(api.controls.target);
-    api.controls.update();
+    const target = api.controls.target.clone();
+    const position = api.camera.position.clone().sub(target).multiplyScalar(zoomRatio).add(target);
+    startCameraTween(api, position, target, api.camera.up.clone(), 420);
     zoomStepRef.current = zoomStep;
   }, [zoomStep]);
 
@@ -904,16 +1391,13 @@ export default function EmbryoScene({
     const api = apiRef.current;
     if (!api) return;
     const position = viewFor(cameraPreset);
-    api.camera.up.set(0, 1, 0);
-    if (cameraPreset === 'superior') api.camera.up.set(0, 0, -1);
-    if (cameraPreset === 'inferior') api.camera.up.set(0, 0, 1);
-    api.controls.target.set(0, 0.45, 0);
-    api.camera.position.set(position[0], position[1], position[2]);
-    api.camera.position.sub(api.controls.target)
-      .multiplyScalar(Math.pow(0.9, zoomStepRef.current))
-      .add(api.controls.target);
-    api.camera.lookAt(api.controls.target);
-    api.controls.update();
+    const target = new THREE.Vector3(0, 0.45, 0);
+    const up = new THREE.Vector3(0, 1, 0);
+    if (cameraPreset === 'superior') up.set(0, 0, -1);
+    if (cameraPreset === 'inferior') up.set(0, 0, 1);
+    const destination = new THREE.Vector3(position[0], position[1], position[2]);
+    destination.sub(target).multiplyScalar(Math.pow(0.9, zoomStepRef.current)).add(target);
+    startCameraTween(api, destination, target, up);
   }, [cameraPreset]);
 
   return <div className="scene-mount" ref={mountRef} />;
