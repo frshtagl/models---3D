@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [scene, app, config] = await Promise.all([
+const [scene, app, config, renderTuning] = await Promise.all([
   readFile('src/components/EmbryoScene.tsx', 'utf8'),
   readFile('src/App.tsx', 'utf8'),
-  readFile('src/data/geometryTuning.ts', 'utf8')
+  readFile('src/data/geometryTuning.ts', 'utf8'),
+  readFile('src/data/renderTuning.ts', 'utf8')
 ]);
 
 // Developmental animation and camera.
@@ -23,7 +24,14 @@ assert.match(app, /},\s*3200\);/);
 
 // Core anatomical surfaces and developmental form.
 assert.match(scene, /function makeLiver\(stageId: VitellineStageId\)/);
-assert.match(scene, /SphereGeometry\(1, 144, 96\)/);
+assert.match(scene, /SphereGeometry\(1, 160, 112\)/);
+assert.match(scene, /new RoomEnvironment\(\)/);
+assert.match(scene, /function setObjectOpacityScale/);
+assert.match(scene, /displayMode !== 'clean'/);
+assert.doesNotMatch(scene, /new THREE\.GridHelper/);
+assert.match(app, /setDisplayMode/);
+assert.match(renderTuning, /toneMappingExposure: 1\.08/);
+assert.match(renderTuning, /contextTeachingOpacity: 0\.28/);
 assert.match(scene, /const leftWing =/);
 assert.match(scene, /const rightWing =/);
 assert.match(scene, /const baseDepth = 0\.52 \+ 0\.17 \* form/);
@@ -43,7 +51,7 @@ assert.match(scene, /const appendHemisphere =/);
 assert.match(scene, /function addVascularJunctions/);
 assert.match(scene, /junction\.degree < 3/);
 assert.match(scene, /layer\.kind === 'sinusoid'/);
-assert.match(scene, /const layerRadiusScale = layer\.kind === 'sinusoid' \? 0\.78 : 1/);
+assert.match(scene, /const layerRadiusScale = layer\.kind === 'sinusoid' \? 0\.62 : 1/);
 assert.doesNotMatch(scene, /new THREE\.SphereGeometry\(radius \* VESSEL_RENDER_CONFIG\.endpointRadiusScale/);
 assert.equal((scene.match(/addVascularJunctions\(group, layer\.paths/g) || []).length, 5);
 assert.match(scene, /function makeDorsalPancreaticBud/);
@@ -54,8 +62,9 @@ assert.doesNotMatch(scene, /scene\.traverse\(\(object\) => \{\s*const mesh = obj
 assert.match(scene, /\}, \[stage\.id, profile, cardinalModel\]\);/);
 assert.match(scene, /group\.visible = presentation\.visible/);
 assert.match(config, /samplesPerUnit: 28/);
-assert.match(config, /minorAxisScale: 0\.88/);
-assert.match(config, /endpointRadiusScale: 0\.88/);
+assert.match(config, /minorAxisScale: 0\.93/);
+assert.match(config, /globalRadiusScale: 0\.84/);
+assert.match(config, /endpointRadiusScale: 0\.9/);
 assert.match(config, /radialSegments: 32/);
 
 // Authored anatomical graph files remain present and editable.
@@ -73,4 +82,4 @@ for (const path of authoredGeometryFiles) {
   assert.ok(fileContent.length > 1000, 'Authored anatomy geometry must remain present: ' + path);
 }
 
-console.log('Core anatomy checks passed: stage-specific hepatic primordium, annular duodenal wall, fine sinusoidal plexus, oval vessel surfaces, hemispherical terminals, shared-node continuity, and registered animation.');
+console.log('Core anatomy and presentation checks passed: sculpted hepatic primordium, lumen-bearing duodenum, refined venous sinus, slimmer oval vessels, subdued sinusoidal plexus, shared-node continuity, studio lighting, and clean / teaching / network display modes.');

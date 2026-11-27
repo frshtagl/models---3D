@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import EmbryoScene from './components/EmbryoScene';
-import type { CameraPreset } from './components/EmbryoScene';
+import type { CameraPreset, SceneDisplayMode } from './components/EmbryoScene';
 import {
   DEVELOPMENT_STAGES,
   PROFILE_DESCRIPTIONS,
@@ -37,6 +37,7 @@ export default function App() {
   const [profile, setProfile] = useState<EvidenceProfile>('human-2017');
   const [cardinalModel, setCardinalModel] = useState<CardinalModel>('human-cardinal-2015');
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('oblique');
+  const [displayMode, setDisplayMode] = useState<SceneDisplayMode>('clean');
   const [visibleLayers, setVisibleLayers] = useState<StructureVisibility>(() => ({ ...DEFAULT_VISIBILITY }));
   const [selectedStructure, setSelectedStructure] = useState<string | null>('human-ductus-venosus');
   const [playing, setPlaying] = useState(false);
@@ -454,6 +455,20 @@ export default function App() {
             </div>
           </div>
 
+          <div className="render-mode-toolbar" role="group" aria-label="3D render mode">
+            <span className="render-mode-label">RENDER</span>
+            {(['clean', 'teaching', 'network'] as const).map((mode) => (
+              <button
+                key={mode}
+                className={'render-mode-button' + (displayMode === mode ? ' active' : '')}
+                onClick={() => setDisplayMode(mode)}
+                aria-pressed={displayMode === mode}
+              >
+                {mode === 'clean' ? 'Clean' : mode === 'teaching' ? 'Teaching' : 'Full network'}
+              </button>
+            ))}
+          </div>
+
           <div className="viewport-wrap">
             <EmbryoScene
               stage={stage}
@@ -463,6 +478,7 @@ export default function App() {
               selectedStructure={selectedStructure}
               cameraPreset={cameraPreset}
               zoomStep={zoomStep}
+              displayMode={displayMode}
               onSelectStructure={setSelectedStructure}
             />
             {teachingOpen && teachingStep && (

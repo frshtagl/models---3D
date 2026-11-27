@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { DevelopmentStage } from '../data/stages';
 import type { StructureVisibility } from '../data/structures';
 import type { EvidenceProfile } from '../data/stages';
@@ -14,8 +15,10 @@ import { UMBILICAL_VASCULAR_LAYERS, getUmbilicalLayerPresentation } from '../dat
 import { CARDINAL_VASCULAR_LAYERS, getCardinalLayerPresentation } from '../data/cardinalNetwork';
 import type { CardinalModel } from '../data/cardinalNetwork';
 import { VESSEL_RENDER_CONFIG } from '../data/geometryTuning';
+import { SCENE_RENDER_TUNING } from '../data/renderTuning';
 
 export type CameraPreset = 'anterior' | 'posterior' | 'right' | 'left' | 'superior' | 'inferior' | 'oblique' | 'reset';
+export type SceneDisplayMode = 'clean' | 'teaching' | 'network';
 
 interface Props {
   stage: DevelopmentStage;
@@ -25,6 +28,7 @@ interface Props {
   selectedStructure: string | null;
   cameraPreset: CameraPreset;
   zoomStep: number;
+  displayMode: SceneDisplayMode;
   onSelectStructure: (id: string) => void;
 }
 
@@ -179,17 +183,19 @@ function startCameraTween(api: SceneApi, position: THREE.Vector3, target: THREE.
 }
 
 function tube(points: THREE.Vector3[], radius: number, color: string) {
+  const centreline = points.map((point) => [point.x, point.y, point.z] as Point3);
+  const refined = makeVesselMesh(centreline, radius, color, 0.94);
+  if (refined) return refined;
   const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
-  const tubularSegments = Math.max(VESSEL_RENDER_CONFIG.minTubularSegments, Math.min(160, Math.ceil(curve.getLength() * VESSEL_RENDER_CONFIG.samplesPerUnit)));
-  const geometry = new THREE.TubeGeometry(curve, tubularSegments, radius, VESSEL_RENDER_CONFIG.radialSegments, false);
+  const geometry = new THREE.TubeGeometry(curve, 96, radius, VESSEL_RENDER_CONFIG.radialSegments, false);
   const material = new THREE.MeshPhysicalMaterial({
-    color,
-    roughness: 0.46,
-    metalness: 0.01,
-    clearcoat: 0.16,
-    clearcoatRoughness: 0.42
+    color, roughness: SCENE_RENDER_TUNING.vesselRoughness, metalness: 0,
+    clearcoat: SCENE_RENDER_TUNING.vesselClearcoat
   });
-  return new THREE.Mesh(geometry, material);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
 }
 
 function makeHollowOrganTube(
@@ -242,10 +248,10 @@ function makeHollowOrganTube(
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
-    vertexColors: true, roughness: 0.74, metalness: 0, clearcoat: 0.055, side: THREE.DoubleSide
+    vertexColors: true, roughness: 0.84, metalness: 0, clearcoat: 0.018, side: THREE.DoubleSide
   }));
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   const group = new THREE.Group();
   group.add(mesh);
   return group;
@@ -268,41 +274,54 @@ function viewFor(preset: CameraPreset) {
 function makeLiver(stageId: VitellineStageId) {
   const stageForm: Record<VitellineStageId, number> = { cs10: 0.04, cs12: 0.28, cs13: 0.72, cs14: 0.9, cs15: 1, cs16: 1 };
   const form = stageForm[stageId];
-  const geometry = new THREE.SphereGeometry(1, 144, 96);
+  const geometry = new THREE.SphereGeometry(1, 160, 112);
   const position = geometry.attributes.position as THREE.BufferAttribute;
   const vertex = new THREE.Vector3();
+
   for (let i = 0; i < position.count; i += 1) {
     vertex.fromBufferAttribute(position, i);
     const x = vertex.x, y = vertex.y, z = vertex.z;
     const dorsal = Math.max(0, z), ventral = Math.max(0, -z);
-    const leftWing = Math.exp(-(((x + 0.54) / 0.36) ** 2) - (((y - 0.02) / 0.62) ** 2)) * dorsal;
-    const rightWing = Math.exp(-(((x - 0.54) / 0.38) ** 2) - (((y - 0.02) / 0.64) ** 2)) * dorsal;
-    const interlobarGroove = Math.exp(-((x / 0.19) ** 2) - (((y - 0.02) / 0.66) ** 2)) * dorsal;
-    const ventromedialLobe = Math.exp(-((x / 0.42) ** 2) - (((y + 0.2) / 0.5) ** 2)) * ventral;
-    const caudalUNotch = Math.exp(-((x / 0.27) ** 2) - (((y + 0.46) / 0.2) ** 2)) * ventral;
+    const leftWing = Math.exp(-(((x + 0.55) / 0.34) ** 2) - (((y - 0.02) / 0.58) ** 2)) * dorsal;
+    const rightWing = Math.exp(-(((x - 0.52) / 0.37) ** 2) - (((y - 0.02) / 0.6) ** 2)) * dorsal;
+    const medialGroove = Math.exp(-((x / 0.17) ** 2) - (((y - 0.04) / 0.62) ** 2)) * dorsal;
+    const ventromedialMass = Math.exp(-((x / 0.38) ** 2) - (((y + 0.18) / 0.46) ** 2)) * ventral;
+    const caudalNotch = Math.exp(-((x / 0.24) ** 2) - (((y + 0.5) / 0.19) ** 2)) * ventral;
+    const rightLobe = x >= 0 ? 1.13 : 0.86;
+    const upperExpansion = Math.exp(-(((y - 0.16) / 0.5) ** 2));
+    const hilarIndent = Math.exp(-(((x - 0.02) / 0.2) ** 2) - (((y + 0.02) / 0.16) ** 2)) * ventral;
+    const gallbladderFossa = Math.exp(-(((x - 0.36) / 0.18) ** 2) - (((y + 0.48) / 0.22) ** 2)) * ventral;
+    const dorsalRelief = Math.exp(-(((x - 0.38) / 0.26) ** 2) - (((y - 0.08) / 0.34) ** 2)) * dorsal;
+    const surfaceRelief = 0.012 * Math.sin(2.8 * x + 0.35) * Math.cos(2.2 * y)
+      + 0.006 * Math.sin(4.1 * y - 0.4 * x);
+    const caudalTaper = 1 - 0.13 * Math.max(0, -y) * (1 - 0.35 * Math.abs(x));
     const wingVolume = form * (leftWing + rightWing);
-    const rightLobe = x >= 0 ? 1.1 : 0.82;
-    const inferiorNotch = Math.exp(-(((x - 0.08) / 0.18) ** 2) - (((y + 0.64) / 0.17) ** 2));
-    const portaHepatisIndent = Math.exp(-(((x - 0.02) / 0.24) ** 2) - (((y + 0.1) / 0.2) ** 2)) * ventral;
-    const gallbladderFossa = Math.exp(-(((x - 0.34) / 0.16) ** 2) - (((y + 0.48) / 0.24) ** 2)) * ventral;
-    const caudateRelief = Math.exp(-(((x - 0.38) / 0.24) ** 2) - (((y + 0.08) / 0.32) ** 2)) * dorsal;
-    const surfaceRelief = 0.009 * Math.sin(3.2 * x + 0.5) * Math.cos(2.6 * y) + 0.005 * Math.sin(5.4 * y + x);
-    const primitiveTaper = 1 - (1 - form) * 0.28 * Math.max(0, -y) * (1 - Math.abs(x));
-    const xPosition = x * 1.52 * rightLobe * primitiveTaper + 0.055 * form * (rightWing - leftWing);
-    const yPosition = y * 0.76 + 0.035 * wingVolume + 0.045 * form * ventromedialLobe + inferiorNotch * 0.08 + caudateRelief * 0.025;
-    const baseDepth = 0.52 + 0.17 * form;
-    const zPosition = z * (baseDepth + surfaceRelief + 0.15 * wingVolume - 0.11 * form * interlobarGroove + 0.055 * form * ventromedialLobe)
-      + portaHepatisIndent * 0.085 - gallbladderFossa * 0.04 - 0.045 * (1 - form) * caudalUNotch;
+
+    const xPosition = x * 1.24 * rightLobe * caudalTaper
+      + 0.045 * form * (rightWing - leftWing);
+    const yPosition = y * 0.59 + 0.045 * wingVolume + 0.035 * form * ventromedialMass
+      + 0.025 * dorsalRelief + 0.012 * upperExpansion * form;
+    const depth = 0.43 + 0.1 * form + surfaceRelief + 0.12 * wingVolume
+      - 0.095 * form * medialGroove + 0.045 * form * ventromedialMass;
+    const zPosition = z * depth - 0.095 * form * hilarIndent
+      - 0.045 * gallbladderFossa - 0.035 * (1 - form) * caudalNotch;
     position.setXYZ(i, xPosition, yPosition, zPosition);
   }
+
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
-    color: '#a76c58', roughness: 0.76, metalness: 0, clearcoat: 0.055,
-    transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide
+    color: '#95695e',
+    roughness: SCENE_RENDER_TUNING.organRoughness,
+    metalness: 0,
+    clearcoat: SCENE_RENDER_TUNING.organClearcoat,
+    transparent: true,
+    opacity: 0.24,
+    depthWrite: false
   }));
-  mesh.position.set(0, 1.4, 0.12);
-  mesh.renderOrder = 1;
+  mesh.position.set(0, 1.38, 0.16);
   mesh.userData.anatomicalForm = 'stage-specific embryonic hepatic primordium';
+  mesh.castShadow = false;
+  mesh.receiveShadow = true;
   return mesh;
 }
 
@@ -328,12 +347,12 @@ function makeEmbryoEnvelope() {
 
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
-    color: '#b58d85',
-    roughness: 0.78,
+    color: '#95827c',
+    roughness: 0.9,
     metalness: 0,
-    clearcoat: 0.04,
+    clearcoat: 0.01,
     transparent: true,
-    opacity: 0.075,
+    opacity: 0.035,
     depthWrite: false,
     side: THREE.DoubleSide
   }));
@@ -344,35 +363,18 @@ function makeEmbryoEnvelope() {
 
 function makeVenousPole() {
   const group = new THREE.Group();
-  const sac = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 88, 64),
-    new THREE.MeshPhysicalMaterial({
-      color: '#5689b8',
-      roughness: 0.38,
-      metalness: 0.01,
-      clearcoat: 0.22,
-      transparent: true,
-      opacity: 0.86
-    })
-  );
-  sac.scale.set(0.46, 0.31, 0.34);
-  sac.position.set(0.1, 2.82, 0.2);
-  group.add(sac);
-  group.add(tube([
-    new THREE.Vector3(-0.25, 2.82, 0.2),
-    new THREE.Vector3(-0.18, 2.84, 0.2),
-    new THREE.Vector3(-0.08, 2.85, 0.2),
-    new THREE.Vector3(0.1, 2.82, 0.2)
-  ], 0.105, '#5689b8'));
-  group.add(tube([
-    new THREE.Vector3(0.45, 2.82, 0.2),
-    new THREE.Vector3(0.36, 2.84, 0.2),
-    new THREE.Vector3(0.24, 2.85, 0.2),
-    new THREE.Vector3(0.1, 2.82, 0.2)
-  ], 0.105, '#5689b8'));
-  group.traverse((object) => {
-    if (object instanceof THREE.Mesh) object.userData.structureId = 'sinus-venosus';
-  });
+  const sinus = tube([
+    new THREE.Vector3(-0.48, 2.76, 0.2),
+    new THREE.Vector3(-0.38, 2.88, 0.18),
+    new THREE.Vector3(-0.2, 2.94, 0.16),
+    new THREE.Vector3(0, 2.96, 0.15),
+    new THREE.Vector3(0.2, 2.94, 0.16),
+    new THREE.Vector3(0.38, 2.88, 0.18),
+    new THREE.Vector3(0.48, 2.76, 0.2)
+  ], 0.112, '#668ca5');
+  sinus.scale.set(1, 0.9, 0.84);
+  sinus.userData.structureId = 'sinus-venosus';
+  group.add(sinus);
   return group;
 }
 
@@ -400,14 +402,12 @@ function makeDorsalPancreaticBud() {
   const mesh = new THREE.Mesh(
     geometry,
     new THREE.MeshPhysicalMaterial({
-      color: '#d9a46e',
-      roughness: 0.64,
-      clearcoat: 0.08,
+      color: '#c49b79',
+      roughness: 0.86,
+      clearcoat: 0.018,
       transparent: true,
-      opacity: 0.84,
-      depthWrite: false,
-      emissive: '#3b2411',
-      emissiveIntensity: 0.055
+      opacity: 0.72,
+      depthWrite: false
     })
   );
   mesh.position.set(
@@ -433,8 +433,8 @@ function makePortalGallbladder() {
   }
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({
-    color: landmark?.color ?? '#a6b86d', roughness: 0.68, clearcoat: 0.055,
-    transparent: true, opacity: 0.92, depthWrite: false, emissive: '#263015', emissiveIntensity: 0.025
+    color: '#87966d', roughness: 0.86, clearcoat: 0.015,
+    transparent: true, opacity: 0.82, depthWrite: false
   }));
   const landmarkPosition = landmark?.position ?? [0.05, 1.13, -0.43];
   mesh.position.set(landmarkPosition[0], landmarkPosition[1], landmarkPosition[2]);
@@ -447,10 +447,35 @@ function highlight(object: THREE.Object3D, active: boolean) {
     if (!mesh.isMesh) return;
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     materials.forEach((material) => {
-      if (material instanceof THREE.MeshStandardMaterial) {
-        if (material.userData.baseColor === undefined) material.userData.baseColor = material.color.getHex();
-        material.color.setHex(active ? 0x8fc9ed : material.userData.baseColor);
-      }
+      if (!(material instanceof THREE.MeshStandardMaterial)) return;
+      if (material.userData.baseColor === undefined) material.userData.baseColor = material.color.getHex();
+      if (material.userData.baseEmissive === undefined) material.userData.baseEmissive = material.emissive.getHex();
+      if (material.userData.baseEmissiveIntensity === undefined) material.userData.baseEmissiveIntensity = material.emissiveIntensity;
+      const baseColor = new THREE.Color(material.userData.baseColor as number);
+      material.color.copy(active ? baseColor.clone().lerp(new THREE.Color('#edf2f4'), 0.24) : baseColor);
+      material.emissive.set(active ? baseColor.clone().multiplyScalar(0.1) : new THREE.Color(material.userData.baseEmissive as number));
+      material.emissiveIntensity = active
+        ? Math.max(material.userData.baseEmissiveIntensity as number, 0.08)
+        : material.userData.baseEmissiveIntensity as number;
+    });
+  });
+}
+
+function setObjectOpacityScale(object: THREE.Object3D, scale: number) {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => {
+      if (material.userData.renderBaseOpacity === undefined) material.userData.renderBaseOpacity = material.opacity;
+      if (material.userData.renderBaseTransparent === undefined) material.userData.renderBaseTransparent = material.transparent;
+      if (material.userData.renderBaseDepthWrite === undefined) material.userData.renderBaseDepthWrite = material.depthWrite;
+      const baseOpacity = material.userData.renderBaseOpacity as number;
+      const baseTransparent = material.userData.renderBaseTransparent as boolean;
+      const baseDepthWrite = material.userData.renderBaseDepthWrite as boolean;
+      material.opacity = baseOpacity * scale;
+      material.transparent = baseTransparent || scale < 0.999;
+      material.depthWrite = scale < 0.999 ? false : baseDepthWrite;
     });
   });
 }
@@ -475,7 +500,7 @@ function makeVesselMesh(points: readonly Point3[], radius: number, color: string
     const startProfile = startTaper + (1 - startTaper) * smooth01(t / 0.14);
     const endProfile = endTaper + (1 - endTaper) * smooth01((1 - t) / 0.14);
     const midBulge = 1 + VESSEL_RENDER_CONFIG.midRadiusBoost * Math.sin(Math.PI * t) ** 2;
-    const localRadius = radius * endpointScale * startProfile * endProfile * midBulge;
+    const localRadius = radius * VESSEL_RENDER_CONFIG.globalRadiusScale * endpointScale * startProfile * endProfile * midBulge;
     for (let j = 0; j <= radialSegments; j += 1) {
       const v = j / radialSegments, angle = v * Math.PI * 2;
       const cosine = Math.cos(angle), sine = Math.sin(angle);
@@ -504,7 +529,8 @@ function makeVesselMesh(points: readonly Point3[], radius: number, color: string
     if (capIndices) for (let i = 0; i < capIndices.length; i += 1) indices.push(capIndices[i] + offset);
     cap.dispose();
   };
-  const startRadius = radius * VESSEL_RENDER_CONFIG.endpointRadiusScale * startTaper, endRadius = radius * VESSEL_RENDER_CONFIG.endpointRadiusScale * endTaper;
+  const startRadius = radius * VESSEL_RENDER_CONFIG.globalRadiusScale * VESSEL_RENDER_CONFIG.endpointRadiusScale * startTaper;
+  const endRadius = radius * VESSEL_RENDER_CONFIG.globalRadiusScale * VESSEL_RENDER_CONFIG.endpointRadiusScale * endTaper;
   if (capStart) appendHemisphere(curve.getPointAt(0), curve.getTangentAt(0).negate(), startRadius);
   if (capEnd) appendHemisphere(curve.getPointAt(1), curve.getTangentAt(1), endRadius);
   const geometry = new THREE.BufferGeometry();
@@ -513,13 +539,22 @@ function makeVesselMesh(points: readonly Point3[], radius: number, color: string
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeBoundingSphere();
+  const vesselTint = new THREE.Color(color).lerp(new THREE.Color('#bac5ce'), 0.07);
   const material = new THREE.MeshPhysicalMaterial({
-    color, roughness: VESSEL_RENDER_CONFIG.roughness, metalness: 0.008, clearcoat: VESSEL_RENDER_CONFIG.clearcoat,
-    clearcoatRoughness: VESSEL_RENDER_CONFIG.clearcoatRoughness, transparent: opacity < 0.98, opacity,
-    depthWrite: opacity >= 0.98, emissive: color, emissiveIntensity: VESSEL_RENDER_CONFIG.emissiveIntensity
+    color: vesselTint,
+    roughness: VESSEL_RENDER_CONFIG.roughness,
+    metalness: 0,
+    clearcoat: VESSEL_RENDER_CONFIG.clearcoat,
+    clearcoatRoughness: VESSEL_RENDER_CONFIG.clearcoatRoughness,
+    transparent: opacity < 0.98,
+    opacity,
+    depthWrite: opacity >= 0.98,
+    emissive: '#000000',
+    emissiveIntensity: 0
   });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = false; mesh.receiveShadow = false;
+  mesh.castShadow = opacity >= 0.9;
+  mesh.receiveShadow = true;
   return mesh;
 }
 
@@ -528,12 +563,18 @@ function makeFlowArrow(points: readonly Point3[], color: string, radius: number)
   const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)), false, VESSEL_RENDER_CONFIG.curveType);
   const position = curve.getPointAt(0.72), direction = curve.getTangentAt(0.72).normalize();
   if (direction.lengthSq() < 1e-8) return null;
-  const height = Math.max(radius * 1.9, 0.04);
-  const arrow = new THREE.Mesh(new THREE.ConeGeometry(Math.max(radius * 0.95, 0.016), height, 12, 1),
-    new THREE.MeshPhysicalMaterial({ color, roughness: 0.52, metalness: 0, clearcoat: 0.08, emissive: color, emissiveIntensity: 0.025 }));
-  arrow.position.copy(position).addScaledVector(direction, height * 0.1);
+  const height = Math.max(radius * 1.28, 0.026);
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(Math.max(radius * 0.62, 0.012), height, 10, 1),
+    new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(color).lerp(new THREE.Color('#c5cdd2'), 0.1),
+      roughness: 0.72, metalness: 0, clearcoat: 0.025
+    })
+  );
+  arrow.position.copy(position).addScaledVector(direction, height * 0.08);
   arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-  arrow.userData.flowCurve = curve; arrow.userData.flowSpeed = 0.11;
+  arrow.userData.flowCurve = curve;
+  arrow.userData.flowSpeed = 0.095;
   arrow.userData.flowOffset = (Math.abs(points[0][0]) * 0.173 + points.length * 0.071) % 1;
   return arrow;
 }
@@ -581,12 +622,12 @@ function addVascularJunctions(group: THREE.Group, paths: readonly JunctionPath[]
   const junctions = collectVascularJunctions(paths);
   junctions.forEach((junction, nodeId) => {
     if (junction.degree < 3) return;
-    const radius = baseRadius * Math.min(1.2, junction.radiusScale) * 0.78;
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 24, 16), new THREE.MeshPhysicalMaterial({
-      color, roughness: VESSEL_RENDER_CONFIG.roughness, metalness: 0.008,
-      clearcoat: VESSEL_RENDER_CONFIG.clearcoat, clearcoatRoughness: VESSEL_RENDER_CONFIG.clearcoatRoughness,
-      transparent: opacity < 0.98, opacity, depthWrite: opacity >= 0.98,
-      emissive: color, emissiveIntensity: VESSEL_RENDER_CONFIG.emissiveIntensity
+    const radius = baseRadius * VESSEL_RENDER_CONFIG.globalRadiusScale * Math.min(1.12, junction.radiusScale) * 0.54;
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 28, 18), new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(color).lerp(new THREE.Color('#b9c4cb'), 0.06),
+      roughness: 0.64, metalness: 0, clearcoat: 0.025,
+      transparent: opacity < 0.98, opacity: Math.min(opacity, 0.84), depthWrite: false,
+      emissive: '#000000', emissiveIntensity: 0
     }));
     mesh.position.set(junction.position[0], junction.position[1], junction.position[2]);
     mesh.userData.structureId = group.userData.structureId ?? group.name;
@@ -596,7 +637,7 @@ function addVascularJunctions(group: THREE.Group, paths: readonly JunctionPath[]
 }
 
 export default function EmbryoScene({
-  stage, profile, cardinalModel, visibleLayers, selectedStructure, cameraPreset, zoomStep, onSelectStructure
+  stage, profile, cardinalModel, visibleLayers, selectedStructure, cameraPreset, zoomStep, displayMode, onSelectStructure
 }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<SceneApi | null>(null);
@@ -614,20 +655,28 @@ export default function EmbryoScene({
     const transitionRoot = new THREE.Group();
     transitionRoot.name = 'stage-transition-layer';
     scene.add(transitionRoot);
-    scene.background = new THREE.Color('#07111f');
-    scene.fog = new THREE.Fog('#07111f', 18, 36);
+    scene.background = null;
+    scene.fog = new THREE.FogExp2(SCENE_RENDER_TUNING.background, SCENE_RENDER_TUNING.fogDensity);
 
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
     camera.position.set(6.2, 4.1, -7.2);
     camera.lookAt(0, 0.45, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = SCENE_RENDER_TUNING.toneMappingExposure;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(SCENE_RENDER_TUNING.background, 0);
     renderer.domElement.className = 'embryo-canvas';
     mount.appendChild(renderer.domElement);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const environmentTarget = pmremGenerator.fromScene(new RoomEnvironment(), 0.04);
+    scene.environment = environmentTarget.texture;
+    pmremGenerator.dispose();
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -636,12 +685,33 @@ export default function EmbryoScene({
     controls.maxDistance = 18;
     controls.target.set(0, 0.45, 0);
 
-    scene.add(new THREE.HemisphereLight('#d7e9ff', '#182332', 1.45));
-    const key = new THREE.DirectionalLight('#fff0dc', 2.25);
-    key.position.set(-4, 7, -5);
+    const hemisphere = new THREE.HemisphereLight(
+      SCENE_RENDER_TUNING.hemisphereSky,
+      SCENE_RENDER_TUNING.hemisphereGround,
+      SCENE_RENDER_TUNING.hemisphereIntensity
+    );
+    scene.add(hemisphere);
+
+    const key = new THREE.DirectionalLight(SCENE_RENDER_TUNING.keyColor, SCENE_RENDER_TUNING.keyIntensity);
+    key.position.set(-4.5, 7.5, -5.5);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.camera.near = 0.5;
+    key.shadow.camera.far = 16;
+    key.shadow.camera.left = -4.5;
+    key.shadow.camera.right = 4.5;
+    key.shadow.camera.top = 4.5;
+    key.shadow.camera.bottom = -4.5;
+    key.shadow.bias = -0.00012;
+    key.shadow.radius = 4;
     scene.add(key);
-    const rim = new THREE.DirectionalLight('#6da8d8', 1.15);
-    rim.position.set(5, 3, 5);
+
+    const fill = new THREE.DirectionalLight(SCENE_RENDER_TUNING.fillColor, SCENE_RENDER_TUNING.fillIntensity);
+    fill.position.set(6, 3.5, 5);
+    scene.add(fill);
+
+    const rim = new THREE.DirectionalLight(SCENE_RENDER_TUNING.rimColor, SCENE_RENDER_TUNING.rimIntensity);
+    rim.position.set(-5, 5.5, 7);
     scene.add(rim);
 
     const objects = new Map<string, THREE.Object3D>();
@@ -649,8 +719,11 @@ export default function EmbryoScene({
       object.name = id;
       object.userData.structureId = id;
       object.traverse((child) => {
-        if (child instanceof THREE.Mesh && typeof child.userData.structureId !== 'string') {
-          child.userData.structureId = id;
+        if (child instanceof THREE.Mesh) {
+          if (typeof child.userData.structureId !== 'string') child.userData.structureId = id;
+          child.receiveShadow = true;
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          child.castShadow = materials.some((material) => material.opacity >= 0.9 && !material.transparent);
         }
       });
       scene.add(object);
@@ -672,7 +745,7 @@ export default function EmbryoScene({
       [0.7, -0.78, 0.1],
       [0.25, -1.02, 0.04],
       [-0.22, -0.91, -0.02]
-    ], 0.135, 0.103, '#dcae7a'));
+    ], 0.118, 0.094, '#c9a48b'));
 
     add('dorsal-pancreatic-bud', makeDorsalPancreaticBud());
     add('portal-gallbladder', makePortalGallbladder());
@@ -687,33 +760,33 @@ export default function EmbryoScene({
 
     const yolkGeometry = new THREE.SphereGeometry(1, 64, 44);
     const yolk = new THREE.Mesh(yolkGeometry, new THREE.MeshPhysicalMaterial({
-      color: '#c6a56e',
-      roughness: 0.7,
+      color: '#aa956f',
+      roughness: 0.9,
       metalness: 0,
-      clearcoat: 0.06,
+      clearcoat: 0.01,
       transparent: true,
-      opacity: 0.32,
+      opacity: 0.22,
       depthWrite: false,
       side: THREE.DoubleSide
     }));
-    yolk.scale.set(1.02, 0.8, 0.55);
-    yolk.position.set(0, -2.18, -0.34);
+    yolk.scale.set(0.78, 0.58, 0.42);
+    yolk.position.set(0, -2.2, -0.38);
     yolk.renderOrder = -1;
     add('yolk-sac', yolk);
 
     const placenta = new THREE.Mesh(
       new THREE.SphereGeometry(1, 56, 36),
       new THREE.MeshPhysicalMaterial({
-        color: '#a97888',
-        roughness: 0.72,
-        clearcoat: 0.04,
+        color: '#8d7480',
+        roughness: 0.9,
+        clearcoat: 0.01,
         transparent: true,
-        opacity: 0.38,
+        opacity: 0.2,
         depthWrite: false
       })
     );
-    placenta.scale.set(1.05, 0.25, 0.18);
-    placenta.position.set(0, -2.62, -0.9);
+    placenta.scale.set(0.78, 0.16, 0.12);
+    placenta.position.set(0, -2.58, -0.88);
     placenta.renderOrder = -1;
     add('placenta', placenta);
 
@@ -762,19 +835,43 @@ export default function EmbryoScene({
 
     add('sinus-venosus', makeVenousPole());
 
+    const septumGeometry = new THREE.SphereGeometry(1, 88, 56);
+    const septumPosition = septumGeometry.attributes.position as THREE.BufferAttribute;
+    const septumVertex = new THREE.Vector3();
+    for (let i = 0; i < septumPosition.count; i += 1) {
+      septumVertex.fromBufferAttribute(septumPosition, i);
+      const x = septumVertex.x, y = septumVertex.y, z = septumVertex.z;
+      const medialNotch = Math.exp(-((x / 0.22) ** 2) - ((z / 0.36) ** 2));
+      const lateralRise = 0.045 * x * x;
+      const shallowSaddle = 0.035 * Math.cos(x * Math.PI * 0.82);
+      septumPosition.setXYZ(
+        i,
+        x * 1.48,
+        y * (0.035 + 0.012 * (1 - Math.abs(x))) + lateralRise + shallowSaddle - medialNotch * 0.018,
+        z * 0.48 + 0.035 * x * x
+      );
+    }
+    septumGeometry.computeVertexNormals();
     const septum = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 40, 20),
-      new THREE.MeshStandardMaterial({
-        color: '#6f9c8a', transparent: true, opacity: 0.22,
-        depthWrite: false, side: THREE.DoubleSide
+      septumGeometry,
+      new THREE.MeshPhysicalMaterial({
+        color: '#87958a',
+        roughness: 0.92,
+        clearcoat: 0.008,
+        transparent: true,
+        opacity: 0.1,
+        depthWrite: false,
+        side: THREE.DoubleSide
       })
     );
-    septum.scale.set(2.05, 0.12, 0.72);
-    septum.position.set(0, 2.0, 0.48);
+    septum.position.set(0, 1.98, 0.48);
+    septum.receiveShadow = true;
+
     add('transverse-septum', septum);
 
-    const axes = new THREE.AxesHelper(1.1);
+    const axes = new THREE.AxesHelper(0.82);
     axes.position.set(-3.05, -1.72, 0.3);
+    axes.visible = false;
     add('orientation-axes', axes);
 
     VITELLINE_SEGMENTS.forEach((segment) => {
@@ -799,12 +896,7 @@ export default function EmbryoScene({
       add(layer.id, new THREE.Group());
     });
 
-    const grid = new THREE.GridHelper(12, 24, '#1d3448', '#132538');
-    grid.position.y = -3.1;
-    const gridMaterial = grid.material as THREE.Material;
-    gridMaterial.transparent = true;
-    gridMaterial.opacity = 0.11;
-    scene.add(grid);
+    // The specimen is presented without a modelling-grid floor.
 
     const fades: FadeRecord[] = [];
     const clock = new THREE.Clock();
@@ -928,6 +1020,7 @@ export default function EmbryoScene({
           materials.forEach((material) => material.dispose());
         }
       });
+      environmentTarget.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === mount) mount.removeChild(renderer.domElement);
       apiRef.current = null;
@@ -996,8 +1089,8 @@ export default function EmbryoScene({
       group.visible = presentation.visible;
       group.userData.vesselState = presentation.state;
       group.userData.statusLabel = presentation.statusLabel;
-      const layerRadiusScale = layer.kind === 'sinusoid' ? 0.78 : 1;
-      const layerOpacity = layer.kind === 'sinusoid' ? presentation.opacity * 0.84 : presentation.opacity;
+      const layerRadiusScale = layer.kind === 'sinusoid' ? 0.62 : 1;
+      const layerOpacity = layer.kind === 'sinusoid' ? presentation.opacity * 0.7 : presentation.opacity;
       layer.paths.forEach((pathItem) => {
         const mesh = makeVesselMesh(
           pathItem.points, layer.radius * presentation.radiusScale * layerRadiusScale * (pathItem.radiusScale ?? 1),
@@ -1182,9 +1275,17 @@ export default function EmbryoScene({
     const api = apiRef.current;
     if (!api) return;
     const stageId = stage.id as VitellineStageId;
+    const fineNetworkIds = new Set(
+      HEPATIC_VASCULAR_LAYERS.filter((layer) => layer.kind === 'sinusoid').map((layer) => layer.id)
+    );
     const setLayerVisibility = (id: string, presentationVisible: boolean) => {
       const group = api.objects.get(id);
-      if (group) group.visible = (visibleLayers[id] ?? true) && presentationVisible;
+      if (!group) return;
+      const fineNetwork = fineNetworkIds.has(id);
+      const modeVisible = !fineNetwork || displayMode !== 'clean' || id === selectedStructure;
+      group.visible = (visibleLayers[id] ?? true) && presentationVisible && modeVisible;
+      setObjectOpacityScale(group, fineNetwork && displayMode === 'teaching'
+        ? SCENE_RENDER_TUNING.sinusoidTeachingOpacity : 1);
     };
 
     VITELLINE_SEGMENTS.forEach((segment) =>
@@ -1210,10 +1311,42 @@ export default function EmbryoScene({
     );
 
     const mesonephrosVisible = ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
-    for (const id of ['mesonephros-right', 'mesonephros-left']) {
+    const pancreasVisible = ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
+    const gallbladderVisible = ['cs14', 'cs15', 'cs16'].includes(stage.id);
+    const contextIds = new Set([
+      'embryo-envelope', 'yolk-sac', 'placenta', 'umbilical-cord',
+      'transverse-septum', 'dorsal-aorta', 'mesonephros-right',
+      'mesonephros-left', 'orientation-axes'
+    ]);
+    const staticVisibility: Record<string, boolean> = {
+      'embryo-envelope': true,
+      liver: true,
+      duodenum: true,
+      'dorsal-pancreatic-bud': pancreasVisible,
+      'portal-gallbladder': gallbladderVisible,
+      foregut: true,
+      'yolk-sac': true,
+      placenta: true,
+      'umbilical-cord': true,
+      'dorsal-aorta': true,
+      'mesonephros-right': mesonephrosVisible,
+      'mesonephros-left': mesonephrosVisible,
+      'sinus-venosus': true,
+      'transverse-septum': true,
+      'orientation-axes': displayMode === 'network'
+    };
+    const contextOpacity = displayMode === 'teaching'
+      ? SCENE_RENDER_TUNING.contextTeachingOpacity
+      : displayMode === 'network' ? SCENE_RENDER_TUNING.contextNetworkOpacity : 1;
+    Object.entries(staticVisibility).forEach(([id, stageVisible]) => {
       const object = api.objects.get(id);
-      if (object) object.visible = (visibleLayers[id] ?? true) && mesonephrosVisible;
-    }
+      if (!object) return;
+      const isContext = contextIds.has(id);
+      const selected = id === selectedStructure;
+      const modeVisible = displayMode !== 'clean' || !isContext || selected;
+      object.visible = (visibleLayers[id] ?? true) && stageVisible && modeVisible;
+      setObjectOpacityScale(object, isContext && !selected ? contextOpacity : 1);
+    });
     const liver = api.objects.get('liver') as THREE.Group | undefined;
     if (liver && liver.userData.geometryStage !== stage.id) {
       clearGroup(liver, api.transitionRoot, api.fades, api.flowMarkers, stageChangePendingRef.current);
@@ -1225,21 +1358,21 @@ export default function EmbryoScene({
     if (duodenum) duodenum.userData.targetScale = stage.duodenumScale;
     const pancreas = api.objects.get('dorsal-pancreatic-bud');
     if (pancreas) {
-      pancreas.visible = (visibleLayers['dorsal-pancreatic-bud'] ?? true)
-        && ['cs13', 'cs14', 'cs15', 'cs16'].includes(stage.id);
+      pancreas.visible = (visibleLayers['dorsal-pancreatic-bud'] ?? true) && pancreasVisible
+        && (displayMode !== 'clean' || selectedStructure === 'dorsal-pancreatic-bud');
     }
     const gallbladder = api.objects.get('portal-gallbladder');
     if (gallbladder) {
-      gallbladder.visible = (visibleLayers['portal-gallbladder'] ?? true)
-        && ['cs14', 'cs15', 'cs16'].includes(stage.id);
+      gallbladder.visible = (visibleLayers['portal-gallbladder'] ?? true) && gallbladderVisible;
     }
-  }, [stage.id, profile, cardinalModel, visibleLayers]);
+    api.flowMarkers.forEach((marker) => { marker.visible = displayMode !== 'clean'; });
+  }, [stage.id, profile, cardinalModel, visibleLayers, displayMode, selectedStructure]);
 
   useEffect(() => {
     const api = apiRef.current;
     if (!api) return;
     api.objects.forEach((object, id) => highlight(object, id === selectedStructure));
-  }, [selectedStructure, stage.id, profile, cardinalModel]);
+  }, [selectedStructure, stage.id, profile, cardinalModel, displayMode]);
 
   useEffect(() => {
     const api = apiRef.current;
