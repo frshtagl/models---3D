@@ -657,7 +657,7 @@ export default function EmbryoScene({
       if (!layerVisible) object.visible = false;
       else if (stageVisible) object.visible = true;
     });
-  }, [visibleLayers]);  }, [visibleLayers]);
+  }, [visibleLayers]);
 
   useEffect(() => {
     const api = apiRef.current;
